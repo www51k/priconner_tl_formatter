@@ -157,6 +157,7 @@ class TlProcessingTests(unittest.TestCase):
         self.assertEqual(formatted, '[54---]🅰️OFF\n')
         self.assertEqual(format_text('【〇〇－－－】オートオフ\n'), '[54---]🅰️OFF\n')
         self.assertEqual(format_text('【〇〇－－－】 "オートオフ"\n'), '[54---]🅰️OFF\n')
+        self.assertEqual(format_text('[5-321]　“🅰️OFF”\n'), '[5-321]🅰️OFF\n')
 
 
 if __name__ == "__main__":
