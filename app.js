@@ -8,6 +8,8 @@ const copyButton = document.querySelector("#copy-output");
 const clearButton = document.querySelector("#clear-input");
 const status = document.querySelector("#status");
 const validation = document.querySelector("#validation");
+const review = document.querySelector("#review");
+const reviewContent = document.querySelector("#review-content");
 
 let pyodidePromise;
 
@@ -52,6 +54,7 @@ async function formatTL() {
   }
   formatButton.disabled = true;
   validation.hidden = true;
+  review.hidden = true;
   try {
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", source);
@@ -61,18 +64,24 @@ formatted = format_text(source_text)
 report = []
 set_text = add_operations(formatted, report=report)
 errors = validate(set_text)
-review = collect_review_items(set_text, formatted)
-json.dumps({"text": set_text, "errors": errors, "review_count": len(review) }, ensure_ascii=False)
+review_items = collect_review_items(set_text, formatted)
+json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
     output.value = data.text;
     copyButton.disabled = false;
+    if (data.review.length) {
+      reviewContent.textContent = data.review.map((item) =>
+        `行${item.line} / ${item.kind}\n${item.reason}\n${item.text}`
+      ).join("\n\n");
+      review.hidden = false;
+    }
     if (data.errors.length) {
       validation.textContent = `検証エラー（${data.errors.length}件）\n${data.errors.join("\n")}`;
       validation.hidden = false;
       setStatus("整形完了・要確認", "error");
     } else {
-      setStatus(`整形完了（レビュー対象 ${data.review_count}件）`, "ready");
+      setStatus(`整形完了（レビュー対象 ${data.review.length}件）`, "ready");
     }
   } catch (error) {
     setStatus(`処理に失敗しました: ${error.message}`, "error");
@@ -87,6 +96,7 @@ clearButton.addEventListener("click", () => {
   output.value = "";
   copyButton.disabled = true;
   validation.hidden = true;
+  review.hidden = true;
   setStatus("準備完了", "ready");
 });
 copyButton.addEventListener("click", async () => {
