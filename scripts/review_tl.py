@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 from tl_common import CHAR_NUMBERS, parse_event
@@ -42,7 +43,12 @@ def collect_review_items(
                 "text": line,
                 "reason": "原本SETを固定し、自動更新しません",
             })
-        if "🅰️ON" in line:
+        original_auto_on = (
+            "🅰️ON" in original_line
+            or re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|オン)", original_line, re.IGNORECASE)
+            is not None
+        )
+        if "🅰️ON" in line and not original_auto_on:
             items.append({
                 "line": line_no,
                 "kind": "AUTO_ON",

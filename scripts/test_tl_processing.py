@@ -68,7 +68,13 @@ class TlProcessingTests(unittest.TestCase):
             "0:10　アオイ　[5---1]🅰️ON\n"
         )
         kinds = {item["kind"] for item in collect_review_items(text, text)}
-        self.assertEqual(kinds, {"ORIGINAL_SET", "AUTO_ON"})
+        self.assertEqual(kinds, {"ORIGINAL_SET"})
+
+    def test_review_queue_finds_added_auto_on(self) -> None:
+        source = "[5----]\n0:10　アオイ\n"
+        formatted = "[5----]\n0:10　アオイ　🅰️ON\n"
+        kinds = {item["kind"] for item in collect_review_items(formatted, source)}
+        self.assertEqual(kinds, {"AUTO_ON"})
 
     def test_structural_preprocessing_preserves_comments(self) -> None:
         text = (
