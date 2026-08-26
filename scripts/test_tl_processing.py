@@ -92,6 +92,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("[5-3-1]", formatted)
         self.assertEqual(formatted.count("[5-3-1]"), 2)
 
+    def test_multiple_formation_symbol_styles_convert_to_fixed_mask(self) -> None:
+        for pattern in ("〇－〇－〇", "0-0-0", "OXOXO", "⭕️❌⭕️❌⭕️"):
+            with self.subTest(pattern=pattern):
+                self.assertEqual(format_text(pattern + "\n"), "[5-3-1]\n")
+
     def test_unregistered_characters_and_untimed_lines_are_formatted(self) -> None:
         text = (
             "【〇－〇〇〇】\"オートオフ\"\n"

@@ -14,7 +14,7 @@ TIME_TOKEN_RE = re.compile(r"(?<!\d)(\d+):(\d{1,2})(?:-(\d{1,2}))?")
 BARE_TIME_RE = re.compile(r"\d{1,2}(?=\s|　|$)")
 BARE_TIME_TOKEN_RE = re.compile(r"^([^\d]*)(\d{1,2})(?=\s|　|$)")
 MASK_RE = re.compile(r"\[([0-9-]{5})\]")
-FORMATION_ON_CHARS = "OO️o○◯〇⭕"
+FORMATION_ON_CHARS = "OO️o○◯〇⭕0０"
 FORMATION_OFF_CHARS = "Xx×✖✕☓_ー－—-─＿"
 FORMATION_RE = re.compile(
     rf"\[?[{re.escape(FORMATION_ON_CHARS + FORMATION_OFF_CHARS)}]{{5}}\]?"
@@ -25,6 +25,9 @@ def normalize_input_line(line: str) -> str:
     """コメントを保護したまま、入力行の構造部分だけを正規化する。"""
     source = str(line).rstrip("\r")
     head, separator, comment = source.partition("//")
+    # 丸・ばつの絵文字は先に1文字へ寄せてから5文字マスクを判定する。
+    head = head.replace("⭕️", "O").replace("⭕", "O")
+    head = head.replace("❌", "X")
     has_formation = FORMATION_RE.search(head) is not None
     has_auto = re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)", head, re.IGNORECASE) is not None
     if not has_formation and not has_auto and not re.match(
@@ -35,9 +38,7 @@ def normalize_input_line(line: str) -> str:
         if MASK_RE.search(head) is None:
             return source
     head = head.replace("【", "[").replace("】", "]")
-    head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("〇️", "O").replace("〇", "O")
-    head = head.replace("❌", "X")
     formation = FORMATION_RE.search(head)
     if formation:
         pattern = formation.group(0).strip("[]")
