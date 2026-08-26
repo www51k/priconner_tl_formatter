@@ -24,12 +24,15 @@ FORMATION_RE = re.compile(
 def normalize_input_line(line: str) -> str:
     """コメントを保護したまま、入力行の構造部分だけを正規化する。"""
     source = str(line).rstrip("\r")
-    if not re.match(
+    head, separator, comment = source.partition("//")
+    has_formation = FORMATION_RE.search(head) is not None
+    if not has_formation and not re.match(
         r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)?[ \t　]*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=[ \t　])|->|>|→|➡︎|⇨|⇒)",
         source,
     ):
-        return source
-    head, separator, comment = source.partition("//")
+        # 時刻のない発動行も、数値SETマスクがあれば構造行として扱う。
+        if MASK_RE.search(head) is None:
+            return source
     head = head.replace("【", "[").replace("】", "]")
     head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("〇️", "O").replace("〇", "O")
@@ -103,7 +106,10 @@ def normalize_time_prefix(prefix: str) -> str:
 def is_event_line(line: str) -> bool:
     stripped = line.lstrip("　 \t")
     stripped = re.sub(r"^(?:⭐️|⭐︎|⭐|🔺)+", "", stripped).lstrip("　 \t")
-    return bool(TIME_RE.match(stripped) or BARE_TIME_RE.match(stripped)) or stripped.startswith("→")
+    if bool(TIME_RE.match(stripped) or BARE_TIME_RE.match(stripped)) or stripped.startswith("→"):
+        return True
+    # 時刻を省略した矢印先・発動行（例: 「ルルィ [54321]」）を認識する。
+    return bool(MASK_RE.search(stripped) and not stripped.startswith("["))
 
 
 def parse_event(line_no: int, line: str) -> Event:
@@ -124,6 +130,18 @@ def parse_event(line_no: int, line: str) -> Event:
             name = candidate
             prefix = line[: match.start()]
             break
+
+    if name is None and mask is not None:
+        # CHARACTERSに未登録のキャラも書式整形だけは可能にする。
+        # SETの意味付けは編成表でキャラ番号が確定した後に行う。
+        body = line
+        body = re.sub(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*", "", body)
+        body = re.sub(r"^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*", "", body)
+        body = re.sub(r"^→\s*", "", body)
+        generic = re.match(r"([^\s　\[\]]+)(?=[\s　\[]|$)", body)
+        if generic:
+            name = generic.group(1)
+            prefix = line[: line.find(name)]
 
     return Event(line_no, line, prefix, name, star, arrow, mask)
 

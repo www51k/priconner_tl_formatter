@@ -17,18 +17,33 @@ from review_tl import collect_review_items  # noqa: E402
 
 
 class TlProcessingTests(unittest.TestCase):
+    reference_source = ROOT / "202608_1b58000_16.org"
+    reference_output = ROOT / "202608_1b58000_16.txt"
+
+    @unittest.skipUnless(
+        reference_source.exists() and reference_output.exists(),
+        "ローカルTL fixtureがある場合だけ実行する",
+    )
     def test_reference_tl_is_reproducible(self) -> None:
-        source = (ROOT / "202608_1b58000_16.org").read_text(encoding="utf-8")
-        expected = (ROOT / "202608_1b58000_16.txt").read_text(encoding="utf-8")
+        source = self.reference_source.read_text(encoding="utf-8")
+        expected = self.reference_output.read_text(encoding="utf-8")
         actual = add_operations(format_text(source))
         self.assertEqual(actual, expected)
 
+    @unittest.skipUnless(
+        reference_output.exists(),
+        "ローカルTL fixtureがある場合だけ実行する",
+    )
     def test_reference_tl_passes_validation(self) -> None:
-        text = (ROOT / "202608_1b58000_16.txt").read_text(encoding="utf-8")
+        text = self.reference_output.read_text(encoding="utf-8")
         self.assertEqual(validate(text), [])
 
+    @unittest.skipUnless(
+        reference_source.exists(),
+        "ローカルTL fixtureがある場合だけ実行する",
+    )
     def test_report_contains_operation_categories(self) -> None:
-        source = (ROOT / "202608_1b58000_16.org").read_text(encoding="utf-8")
+        source = self.reference_source.read_text(encoding="utf-8")
         report: list[str] = []
         add_operations(format_text(source), report=report)
         report_text = "\n".join(report)
@@ -71,6 +86,18 @@ class TlProcessingTests(unittest.TestCase):
         formatted = format_text(text)
         self.assertIn("[5-3-1]", formatted)
         self.assertEqual(formatted.count("[5-3-1]"), 2)
+
+    def test_unregistered_characters_and_untimed_lines_are_formatted(self) -> None:
+        text = (
+            "【〇－〇〇〇】\"オートオフ\"\n"
+            "1:16　ユニ　【－〇〇〇〇】\n"
+            "　　　ルルィ　【〇〇－〇〇】\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("[5-321]", formatted)
+        self.assertIn("1:16　ユニ", formatted)
+        self.assertIn("ルルィ", formatted)
+        self.assertIn("[54-21]", formatted)
 
 
 if __name__ == "__main__":
