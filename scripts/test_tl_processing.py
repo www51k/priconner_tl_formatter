@@ -169,6 +169,14 @@ class TlProcessingTests(unittest.TestCase):
         )
         self.assertEqual(validate(text), [])
 
+    def test_original_mask_makes_unstarred_auto_line_valid(self) -> None:
+        text = (
+            "[(5)フブキ|(4)スミレ|(3)アオイ|(2)ペコ|(1)ネラ]\n"
+            "[----4]\n"
+            "0:18　スミレ　[54321]\n"
+        )
+        self.assertEqual(validate(text), [])
+
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')

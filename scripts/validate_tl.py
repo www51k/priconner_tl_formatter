@@ -39,7 +39,7 @@ def validate(text: str) -> list[str]:
         number = character_numbers[event.name]
         if event.star and number in state:
             errors.append(f"{line_no}: ⭐️手動対象の{event.name}がSET内にあります")
-        if not event.star and number not in state:
+        if not event.star and number not in state and mask is None:
             errors.append(f"{line_no}: ⭐️なしの{event.name}がSET外です")
 
         if mask is not None:
