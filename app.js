@@ -181,7 +181,7 @@ error_details = []
 for error in errors:
     line_number = int(error.split(":", 1)[0])
     target_line = set_text.splitlines()[line_number - 1] if line_number > 0 else ""
-    error_details.append(f"{error}\n対象行: {target_line}")
+    error_details.append(f"{error}\\n対象行: {target_line}")
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
