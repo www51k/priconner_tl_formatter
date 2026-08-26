@@ -97,6 +97,10 @@ class TlProcessingTests(unittest.TestCase):
             with self.subTest(pattern=pattern):
                 self.assertEqual(format_text(pattern + "\n"), "[5-3-1]\n")
 
+    def test_parenthesized_formation_symbols_do_not_leave_parentheses(self) -> None:
+        formatted = format_text("0:14　ティア　(〇〇〇〇〇)\n")
+        self.assertEqual(formatted, "0:14　ティア　　[54321]\n")
+
     def test_unregistered_characters_and_untimed_lines_are_formatted(self) -> None:
         text = (
             "【〇－〇〇〇】\"オートオフ\"\n"

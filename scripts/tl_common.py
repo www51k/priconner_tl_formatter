@@ -28,6 +28,8 @@ def normalize_input_line(line: str) -> str:
     # 丸・ばつの絵文字は先に1文字へ寄せてから5文字マスクを判定する。
     head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("❌", "X")
+    formation_chars = re.escape(FORMATION_ON_CHARS + FORMATION_OFF_CHARS)
+    head = re.sub(rf"\(([{formation_chars}]{{5}})\)", r"[\1]", head)
     has_formation = FORMATION_RE.search(head) is not None
     has_auto = re.search(
         r"(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)|🅰️(?:ON|OFF)",
