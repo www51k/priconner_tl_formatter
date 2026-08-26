@@ -108,6 +108,10 @@ class TlProcessingTests(unittest.TestCase):
         self.assertTrue(result.startswith("1:30"))
         self.assertNotIn("[-----]", result)
 
+    def test_japanese_auto_labels_are_normalized(self) -> None:
+        formatted = format_text('【〇〇－－－】"オートオフ"\n')
+        self.assertEqual(formatted, '[54---]🅰️OFF\n')
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -26,7 +26,8 @@ def normalize_input_line(line: str) -> str:
     source = str(line).rstrip("\r")
     head, separator, comment = source.partition("//")
     has_formation = FORMATION_RE.search(head) is not None
-    if not has_formation and not re.match(
+    has_auto = re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)", head, re.IGNORECASE) is not None
+    if not has_formation and not has_auto and not re.match(
         r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)?[ \t　]*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=[ \t　])|->|>|→|➡︎|⇨|⇒)",
         source,
     ):
@@ -49,10 +50,12 @@ def normalize_input_line(line: str) -> str:
             for index, char in enumerate(converted)
         )
         head = head[: formation.start()] + f"[{converted}]" + head[formation.end() :]
-    head = re.sub(r"(?i)AUTO[ \t　]*ON", "🅰️ON", head)
-    head = re.sub(r"(?i)AUTO[ \t　]*OFF", "🅰️OFF", head)
-    head = re.sub(r"オート[ \t　]*ON", "🅰️ON", head)
-    head = re.sub(r"オート[ \t　]*OFF", "🅰️OFF", head)
+    head = re.sub(
+        r'''["「『]?(?:オート|AUTO)[ \t　]*(ON|OFF|オン|オフ)["」』]?''',
+        lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",
+        head,
+        flags=re.IGNORECASE,
+    )
     head = re.sub(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)", "⭐️", head)
     head = re.sub(r"^[ \t　]*(?:->|>|➡︎|⇨|⇒)", "　　→", head)
     head = re.sub(r"[ \t]+", "　", head)
