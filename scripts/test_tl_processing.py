@@ -131,6 +131,17 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("[-4---]", result)
 
+    def test_untimed_following_events_are_rendered_as_arrows(self) -> None:
+        text = (
+            "0:49　スミレ　【〇－－〇〇】\n"
+            "　　　ルルィ　【〇〇－〇〇】\n"
+            "　　　シオリ　【〇〇〇〇〇】\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("0:49　スミレ", formatted)
+        self.assertIn("→　ルルィ", formatted)
+        self.assertIn("→　シオリ", formatted)
+
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')

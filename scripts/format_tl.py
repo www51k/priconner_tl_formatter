@@ -4,19 +4,28 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 
-from tl_common import MASK_RE, normalize_input_line, parse_event, render_event
+from tl_common import MASK_RE, TIME_RE, normalize_input_line, parse_event, render_event
 
 
 def format_text(text: str) -> str:
     output: list[str] = []
+    arrow_chain_active = False
     for line_no, line in enumerate(text.splitlines(), 1):
         line = normalize_input_line(line)
         event = parse_event(line_no, line)
         if event.name:
+            has_time = TIME_RE.search(event.prefix) is not None
+            if not has_time and arrow_chain_active:
+                event = replace(event, prefix="　　→", arrow=True)
+            arrow_chain_active = True if not has_time else True
+            if has_time:
+                arrow_chain_active = True
             output.append(render_event(event, f"[{event.mask}]" if event.mask else None))
         else:
+            arrow_chain_active = False
             output.append(line.rstrip("\r"))
     return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
 
