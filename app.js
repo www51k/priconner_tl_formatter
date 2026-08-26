@@ -78,7 +78,13 @@ function diagnoseTL(source) {
   }
   const hasManualMarker = /⭐️|⭐︎|⭐|★/.test(source);
   const hasAutoMarker = /🅰️|オート|AUTO/i.test(source);
-  if (hasManualMarker) {
+  const nonEmptyLines = source.split("\n").map((line) => line.trim()).filter(Boolean);
+  const hasSetOperation = nonEmptyLines.slice(1).some((line) =>
+    /^\[[54321-]{5}\]/.test(line)
+  );
+  if (hasSetOperation) {
+    diagnosis.innerHTML = "判定：<strong>セミオ扱い</strong>（SET操作あり。SET操作は不要として扱います）";
+  } else if (hasManualMarker) {
     diagnosis.innerHTML = "判定：<strong>手動TL</strong>（⭐️などの手動発動記号あり）";
   } else if (hasAutoMarker) {
     diagnosis.innerHTML = "判定：<strong>セミオ候補</strong>（手動発動記号なし・オート表記あり）";
@@ -115,7 +121,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=formation-header`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=diagnosis-set-rule`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
