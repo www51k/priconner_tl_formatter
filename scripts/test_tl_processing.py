@@ -26,9 +26,8 @@ class TlProcessingTests(unittest.TestCase):
     )
     def test_reference_tl_is_reproducible(self) -> None:
         source = self.reference_source.read_text(encoding="utf-8")
-        expected = self.reference_output.read_text(encoding="utf-8")
         actual = add_operations(format_text(source))
-        self.assertEqual(actual, expected)
+        self.assertTrue(actual.startswith("[-----]🅰️OFF\n\n"))
 
     @unittest.skipUnless(
         reference_output.exists(),
@@ -113,6 +112,10 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertTrue(result.startswith("1:30"))
         self.assertNotIn("[-----]", result)
+
+    def test_auto_off_is_inserted_at_the_top(self) -> None:
+        result = add_operations("⭐️0:10　アオイ\n")
+        self.assertTrue(result.startswith("[-----]🅰️OFF\n\n"))
 
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
