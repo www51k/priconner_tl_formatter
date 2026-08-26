@@ -99,6 +99,15 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("ルルィ", formatted)
         self.assertIn("[54-21]", formatted)
 
+    def test_battle_start_mask_is_not_replaced_by_empty_set(self) -> None:
+        text = (
+            "1:30　バトル開始　[54---]\"AUTO\"🅰️ON\n"
+            "1:16　ユニ　[-4321]\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertTrue(result.startswith("1:30"))
+        self.assertNotIn("[-----]", result)
+
 
 if __name__ == "__main__":
     unittest.main()

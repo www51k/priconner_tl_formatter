@@ -40,6 +40,38 @@ def add_operations(
     )
     explicit_start = False
     start_mask_index: int | None = None
+
+    # 編成表がないTLでは、先頭の数値SET行を開始状態として扱う。
+    # 「1:30 バトル開始 [54---]」のように時刻付きの場合も、同じ行の
+    # マスクを初期状態として使用し、独立した[-----]行を挿入しない。
+    for relative_index, line in enumerate(lines[: first_event_index]):
+        match = MASK_RE.search(line)
+        if match and (line.lstrip().startswith("[") or "バトル開始" in line):
+            effective_initial = match.group(1)
+            explicit_start = True
+            start_mask_index = relative_index
+            break
+
+    if not explicit_start:
+        first_line_with_mask = next(
+            (
+                (index, MASK_RE.search(line))
+                for index, line in enumerate(lines)
+                if line.strip() and MASK_RE.search(line)
+            ),
+            None,
+        )
+        if first_line_with_mask is not None:
+            index, match = first_line_with_mask
+            line = lines[index]
+            if index == next(
+                (i for i, candidate in enumerate(lines) if candidate.strip()),
+                index,
+            ) or "バトル開始" in line:
+                effective_initial = match.group(1)
+                explicit_start = True
+                start_mask_index = index
+
     if header_index >= 0:
         for relative_index, line in enumerate(
             lines[header_index + 1 : first_event_index], header_index + 1
@@ -257,7 +289,7 @@ def add_operations(
     # 実際の操作順に合わせて、ADDは上から連続統合し、REMOVEは
     # Phase 1で下から確認した解除条件を使って安全な位置へ配置する。
     for index, (line, event) in enumerate(zip(lines, events)):
-        if not event.name:
+        if not event.name or event.name not in CHAR_NUMBERS:
             rendered[index] = line.rstrip("\r")
             if event.mask is not None and not ignore_original_set and index != start_mask_index:
                 state = numbers_from_mask(event.mask)
@@ -437,7 +469,7 @@ def add_operations(
     # Phase 3: 確定した状態を出力へ反映する。
     # 変更のない行は省略し、絶対マスクとして表示する。
     for index, event in enumerate(events):
-        if event.name:
+        if event.name in CHAR_NUMBERS:
             rendered[index] = render_event(event, masks.get(index))
 
     output: list[str] = []

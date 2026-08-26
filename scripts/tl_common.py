@@ -143,6 +143,10 @@ def parse_event(line_no: int, line: str) -> Event:
             name = generic.group(1)
             prefix = line[: line.find(name)]
 
+    # 開始行・ボス行はキャラクター発動ではない。
+    if name in {"バトル開始", "ボス", "止めぽ"}:
+        name = None
+
     return Event(line_no, line, prefix, name, star, arrow, mask)
 
 
