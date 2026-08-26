@@ -117,6 +117,15 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations("⭐️0:10　アオイ\n")
         self.assertTrue(result.startswith("[-----]🅰️OFF\n\n"))
 
+    def test_formation_header_maps_unregistered_characters(self) -> None:
+        text = (
+            "[(5)ユニ|(4)スミレ|(3)グレイス|(2)ルルィ|(1)シオリ]\n"
+            "⭐️1:16　ユニ\n"
+            "1:01　スミレ\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("[-4---]", result)
+
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')

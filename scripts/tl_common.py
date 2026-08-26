@@ -142,7 +142,18 @@ def parse_event(line_no: int, line: str) -> Event:
         body = re.sub(r"^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*", "", body)
         body = re.sub(r"^→\s*", "", body)
         generic = re.match(r"([^\s　\[\]]+)(?=[\s　\[]|$)", body)
-        if generic:
+        if generic and len(generic.group(1)) <= 4:
+            name = generic.group(1)
+            prefix = line[: line.find(name)]
+
+    if name is None:
+        # 時刻付きの未登録キャラも、編成表から後で番号を解決できるよう抽出する。
+        body = line
+        body = re.sub(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*", "", body)
+        body = re.sub(r"^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*", "", body)
+        body = re.sub(r"^→\s*", "", body)
+        generic = re.match(r"([^\s　\[\]]+)(?=[\s　\[]|$)", body)
+        if generic and len(generic.group(1)) <= 4:
             name = generic.group(1)
             prefix = line[: line.find(name)]
 

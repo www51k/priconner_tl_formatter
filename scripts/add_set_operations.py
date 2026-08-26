@@ -29,6 +29,10 @@ def add_operations(
 ) -> str:
     lines = text.splitlines()
     events = [parse_event(line_no, line) for line_no, line in enumerate(lines, 1)]
+    character_numbers = dict(CHAR_NUMBERS)
+    for line in lines:
+        for match in re.finditer(r"\(([54321])\)([^|)\]]+)", line):
+            character_numbers[match.group(2).strip()] = match.group(1)
     effective_initial = initial
     header_index = next(
         (index for index, line in enumerate(lines) if line.startswith("[") and "|" in line),
@@ -88,7 +92,7 @@ def add_operations(
     if not explicit_start:
         first_event = events[first_event_index] if first_event_index < len(events) else None
         if first_event and first_event.name and not first_event.star and not first_event.arrow:
-            effective_initial = mask_for({CHAR_NUMBERS[first_event.name]})[1:-1]
+            effective_initial = mask_for({character_numbers[first_event.name]})[1:-1]
 
     def event_seconds(event) -> int | None:
         match = TIME_TOKEN_RE.search(event.prefix)
@@ -101,12 +105,12 @@ def add_operations(
     # の予定を先に分離しておくことで、SET追加や解除の判断を混在させない。
     character_constraints: dict[str, dict[str, list[int]]] = {
         number: {"manual": [], "auto": [], "arrow": []}
-        for number in CHAR_NUMBERS.values()
+        for number in character_numbers.values()
     }
     for index, event in enumerate(events):
-        if event.name not in CHAR_NUMBERS:
+        if event.name not in character_numbers:
             continue
-        number = CHAR_NUMBERS[event.name]
+        number = character_numbers[event.name]
         if event.star:
             character_constraints[number]["manual"].append(index)
         elif event.arrow:
@@ -118,7 +122,7 @@ def add_operations(
     # 各キャラについて「次が手動・矢印・通常のどれか」を確定する。
     character_decisions: dict[str, dict[int, dict[str, object]]] = {
         number: {}
-        for number in CHAR_NUMBERS.values()
+        for number in character_numbers.values()
     }
     for number in "54321":
         indexes = sorted(
@@ -154,7 +158,7 @@ def add_operations(
     # キャラ別の制約から、手動UBの解除位置を先に確定する。
     # 時刻差ではなく、発動順とキャラの一致を優先して解除位置を決める。
     manual_release_indexes: dict[int, int | None] = {}
-    for number in CHAR_NUMBERS.values():
+    for number in character_numbers.values():
         for manual_index in character_constraints[number]["manual"]:
             manual_event = events[manual_index]
             candidates = [
@@ -181,7 +185,7 @@ def add_operations(
     early_exclusions_by_start: dict[int, set[str]] = {}
     early_exclusions_by_end: dict[int, set[str]] = {}
     for manual_index, release_index in manual_release_indexes.items():
-        number = CHAR_NUMBERS[events[manual_index].name]
+        number = character_numbers[events[manual_index].name]
         if release_index is not None:
             start_index = release_index
             early_exclusions_by_start.setdefault(start_index, set()).add(number)
@@ -255,7 +259,7 @@ def add_operations(
 
     def next_character(index: int):
         for candidate in events[index + 1 :]:
-            if candidate.name in CHAR_NUMBERS:
+            if candidate.name in character_numbers:
                 return candidate
         return None
 
@@ -289,7 +293,7 @@ def add_operations(
     # 実際の操作順に合わせて、ADDは上から連続統合し、REMOVEは
     # Phase 1で下から確認した解除条件を使って安全な位置へ配置する。
     for index, (line, event) in enumerate(zip(lines, events)):
-        if not event.name or event.name not in CHAR_NUMBERS:
+        if not event.name or event.name not in character_numbers:
             rendered[index] = line.rstrip("\r")
             if event.mask is not None and not ignore_original_set and index != start_mask_index:
                 state = numbers_from_mask(event.mask)
@@ -305,9 +309,9 @@ def add_operations(
             and index + 1 < len(events)
             and events[index + 1].arrow
         )
-        number = CHAR_NUMBERS[event.name]
+        number = character_numbers[event.name]
         has_future_character = any(
-            candidate.name in CHAR_NUMBERS for candidate in events[index + 1 :]
+            candidate.name in character_numbers for candidate in events[index + 1 :]
         )
 
         # stateは、現在行の発動直前の状態として扱う。
@@ -322,7 +326,7 @@ def add_operations(
             # 後続の矢印先は、矢印元の発動直前までSET外にする。
             # 止めぽや空行などのメモを挟む場合も、直前の発動行を更新する。
             future_numbers = {
-                CHAR_NUMBERS[events[arrow_index].name]
+                character_numbers[events[arrow_index].name]
                 for arrow_index in (chain or delayed_chain)
                 if events[arrow_index].name
             }
@@ -340,7 +344,7 @@ def add_operations(
             assignment_index = previous
             if chain or delayed_chain:
                 future_numbers = {
-                    CHAR_NUMBERS[events[arrow_index].name]
+                    character_numbers[events[arrow_index].name]
                     for arrow_index in (chain or delayed_chain)
                     if events[arrow_index].name
                 }
@@ -359,9 +363,9 @@ def add_operations(
         before_action = set(state)
         if not event.arrow and chain:
             # 元キャラ発動直後に、最初の矢印先だけを追加する。
-            state.add(CHAR_NUMBERS[events[chain[0]].name])
+            state.add(character_numbers[events[chain[0]].name])
             for arrow_index in chain[1:]:
-                state.discard(CHAR_NUMBERS[events[arrow_index].name])
+                state.discard(character_numbers[events[arrow_index].name])
         elif event.arrow and chain:
             # 矢印先発動直後に、次の矢印先だけを追加する。
             decision = character_decisions[number][index]
@@ -379,14 +383,14 @@ def add_operations(
             else:
                 state.discard(number)
             for arrow_index in chain[1:]:
-                state.discard(CHAR_NUMBERS[events[arrow_index].name])
-            state.add(CHAR_NUMBERS[events[chain[0]].name])
+                state.discard(character_numbers[events[arrow_index].name])
+            state.add(character_numbers[events[chain[0]].name])
 
         if chain or delayed_chain:
             # 危険な矢印連鎖では、後続の矢印先を先行SETしない。
             # ただし、将来の確定した通常発動キャラは既存状態として維持する。
             next_arrow = (chain or delayed_chain)[0]
-            state.add(CHAR_NUMBERS[events[next_arrow].name])
+            state.add(character_numbers[events[next_arrow].name])
             # 時刻付きの通常発動が後続するキャラは、発動予定が確定しているため
             # 発動後もSETを継続する。矢印先の先行SETとは区別する。
             if (
@@ -412,7 +416,7 @@ def add_operations(
                 state.discard(number)
             next_event = next_character(index)
             if next_event is not None and not next_event.star:
-                state.add(CHAR_NUMBERS[next_event.name])
+                state.add(character_numbers[next_event.name])
 
         # 明確な解除理由がないキャラは、次の予定がなくてもSETを継続する。
         # 手動対象は上で解除し、未来の矢印先は連鎖開始前に解除済み。
@@ -437,7 +441,7 @@ def add_operations(
         # 次の操作が⭐️または矢印の場合は、誤発防止のため個別に扱う。
         next_event = next_operation(index)
         if next_event is not None and not next_event.star and not next_event.arrow:
-            state.add(CHAR_NUMBERS[next_event.name])
+            state.add(character_numbers[next_event.name])
 
         changed_mask = mask_for(state) if state != before_action else None
         operation_kinds[index] = classify_operation(before_action, state)
@@ -469,7 +473,7 @@ def add_operations(
     # Phase 3: 確定した状態を出力へ反映する。
     # 変更のない行は省略し、絶対マスクとして表示する。
     for index, event in enumerate(events):
-        if event.name in CHAR_NUMBERS:
+        if event.name in character_numbers:
             rendered[index] = render_event(event, masks.get(index))
 
     output: list[str] = []
