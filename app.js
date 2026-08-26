@@ -70,12 +70,12 @@ json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure
     const data = JSON.parse(result);
     output.value = data.text;
     copyButton.disabled = false;
-    if (data.review.length) {
-      reviewContent.textContent = data.review.map((item) =>
+    reviewContent.textContent = data.review.length
+      ? data.review.map((item) =>
         `行${item.line} / ${item.kind}\n${item.reason}\n${item.text}`
-      ).join("\n\n");
-      review.hidden = false;
-    }
+      ).join("\n\n")
+      : "レビュー対象はありません。";
+    review.hidden = false;
     if (data.errors.length) {
       validation.textContent = `検証エラー（${data.errors.length}件）\n${data.errors.join("\n")}`;
       validation.hidden = false;

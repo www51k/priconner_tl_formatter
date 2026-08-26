@@ -40,6 +40,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .status.error { color: var(--danger); }
 .validation { margin-top: 14px; border-radius: 10px; padding: 12px 14px; background: rgba(255,155,155,.08); color: var(--danger); font: 13px/1.6 ui-monospace, monospace; white-space: pre-wrap; }
 .review { margin-top: 14px; border: 1px solid #38506a; border-radius: 10px; padding: 14px; background: rgba(87,145,190,.08); }
+.review-separator { color: #6f8298; font: 13px/1.6 ui-monospace, monospace; margin-bottom: 10px; }
 .review-title { color: #9ed2f5; font-size: .82rem; font-weight: 800; letter-spacing: .08em; margin-bottom: 8px; }
 .review pre { margin: 0; color: #c5d7e8; font: 13px/1.6 ui-monospace, monospace; white-space: pre-wrap; }
 footer { display: flex; justify-content: space-between; color: #68768a; font-size: .75rem; padding: 10px 4px; }
