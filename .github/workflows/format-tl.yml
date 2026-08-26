@@ -1,0 +1,64 @@
+name: Format TL
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_file:
+        description: "整形するTLファイル（リポジトリルートからの相対パス）"
+        required: true
+        default: "202608_1b58000_16.txt"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run tests
+        run: python -m unittest scripts/test_tl_processing.py
+
+      - name: Format and add SET operations
+        id: process
+        env:
+          INPUT_FILE: ${{ inputs.input_file }}
+        run: |
+          set -euo pipefail
+          test -f "$INPUT_FILE"
+          base_name="$(basename "$INPUT_FILE")"
+          stem="${base_name%.*}"
+          mkdir -p action-output
+          python scripts/format_tl.py "$INPUT_FILE" "action-output/${stem}_formatted.txt"
+          python scripts/add_set_operations.py \
+            "action-output/${stem}_formatted.txt" \
+            "action-output/${stem}_set.txt" \
+            --report "action-output/${stem}_set.report.txt"
+          python scripts/review_tl.py \
+            "action-output/${stem}_set.txt" \
+            "action-output/${stem}_review.json" \
+            --source "action-output/${stem}_formatted.txt" \
+            --json
+          echo "stem=$stem" >> "$GITHUB_OUTPUT"
+
+      - name: Validate generated TL
+        env:
+          STEM: ${{ steps.process.outputs.stem }}
+        run: python scripts/validate_tl.py "action-output/${STEM}_set.txt"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tl-format-result
+          path: action-output/
+          if-no-files-found: error

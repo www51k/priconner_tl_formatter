@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="プリコネTLをブラウザ内で整形するツール">
+    <title>TL Formatter</title>
+    <link rel="stylesheet" href="app.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="eyebrow">PRICONNE / BATTLE LOG TOOL</div>
+        <h1>TL Formatter</h1>
+        <p>TLを貼り付けて、書式とSET操作をまとめて整形します。</p>
+      </header>
+
+      <section class="panel input-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="step">01</span>
+            <h2>元TL</h2>
+          </div>
+          <button id="clear-input" class="button ghost" type="button">クリア</button>
+        </div>
+        <textarea id="input" spellcheck="false" placeholder="ここにTLを貼り付けてください"></textarea>
+        <div class="actions">
+          <button id="format" class="button primary" type="button">整形する</button>
+          <span id="status" class="status" role="status">準備中...</span>
+        </div>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="step">02</span>
+            <h2>整形済みTL</h2>
+          </div>
+          <button id="copy-output" class="button ghost" type="button" disabled>コピー</button>
+        </div>
+        <textarea id="output" readonly spellcheck="false" placeholder="整形結果がここに表示されます"></textarea>
+        <div id="validation" class="validation" hidden></div>
+      </section>
+
+      <footer>
+        <span>処理はブラウザ内で完結します</span>
+        <span>TL Formatter</span>
+      </footer>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
