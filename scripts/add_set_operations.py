@@ -235,7 +235,7 @@ def add_operations(
         result: list[int] = []
         candidate = index + 1
         while candidate < len(events) and events[candidate].arrow:
-            if events[candidate].name:
+            if events[candidate].name in character_numbers:
                 result.append(candidate)
             candidate += 1
         return result
@@ -250,9 +250,9 @@ def add_operations(
                 saw_stop = True
                 candidate += 1
                 continue
-            if events[candidate].name:
+            if events[candidate].name in character_numbers:
                 return []
-            if saw_stop and events[candidate].arrow:
+            if saw_stop and events[candidate].arrow and events[candidate].name in character_numbers:
                 return [candidate] + arrow_chain(candidate)
             candidate += 1
         return []
@@ -265,7 +265,7 @@ def add_operations(
 
     def next_operation(index: int):
         for candidate in events[index + 1 :]:
-            if candidate.name or candidate.arrow:
+            if candidate.name in character_numbers:
                 return candidate
         return None
 
