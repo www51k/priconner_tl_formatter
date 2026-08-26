@@ -27,7 +27,7 @@ class TlProcessingTests(unittest.TestCase):
     def test_reference_tl_is_reproducible(self) -> None:
         source = self.reference_source.read_text(encoding="utf-8")
         actual = add_operations(format_text(source))
-        self.assertTrue(actual.startswith("[-----]🅰️OFF\n\n"))
+        self.assertIn("\n[-----]🅰️OFF\n", actual)
 
     @unittest.skipUnless(
         reference_output.exists(),
@@ -116,6 +116,11 @@ class TlProcessingTests(unittest.TestCase):
     def test_auto_off_is_inserted_at_the_top(self) -> None:
         result = add_operations("⭐️0:10　アオイ\n")
         self.assertTrue(result.startswith("[-----]🅰️OFF\n\n"))
+
+    def test_formation_header_precedes_auto_off(self) -> None:
+        text = "[(5)ユキノ|(4)ティア|(3)ミソラ|(2)ソノ|(1)イサナミ]\n⭐️0:10　ユキノ\n"
+        result = add_operations(format_text(text))
+        self.assertTrue(result.startswith("[(5)ユキノ|(4)ティア|(3)ミソラ|(2)ソノ|(1)イサナミ]\n\n[-----]🅰️OFF"))
 
     def test_formation_header_maps_unregistered_characters(self) -> None:
         text = (

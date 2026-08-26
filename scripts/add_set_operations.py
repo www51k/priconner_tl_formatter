@@ -483,7 +483,10 @@ def add_operations(
             output.append(standalone_after[index])
 
     if not explicit_start and not any("🅰️OFF" in line for line in output):
-        output = [f"[{effective_initial}]🅰️OFF", ""] + output
+        if output and output[0].startswith("[(") and "|" in output[0]:
+            output = output[:1] + ["", f"[{effective_initial}]🅰️OFF"] + output[1:]
+        else:
+            output = [f"[{effective_initial}]🅰️OFF", ""] + output
 
     if report is not None:
         for index, kind in operation_kinds.items():
