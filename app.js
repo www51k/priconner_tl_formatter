@@ -80,11 +80,11 @@ function diagnoseTL(source) {
   }
   const hasManualMarker = source.split("\n").some((rawLine) => {
     let line = rawLine.split("//", 1)[0].trim();
-    const hasMarker = /^(?:⭐️|⭐︎|⭐|★)|^\d{1,2}:\d{1,2}\s*(?:⭐️|⭐︎|⭐|★)/.test(line);
+    const hasMarker = /^(?:⭐️|⭐︎|⭐)|^\d{1,2}:\d{1,2}\s*(?:⭐️|⭐︎|⭐)/.test(line);
     if (!hasMarker) return false;
-    line = line.replace(/^(?:⭐️|⭐︎|⭐|★)\s*/, "");
+    line = line.replace(/^(?:⭐️|⭐︎|⭐)\s*/, "");
     line = line.replace(/^\d{1,2}:\d{1,2}\s*/, "");
-    line = line.replace(/^(?:⭐️|⭐︎|⭐|★)\s*/, "");
+    line = line.replace(/^(?:⭐️|⭐︎|⭐)\s*/, "");
     return !line.startsWith("※") && !line.startsWith("//") && Boolean(line);
   });
   const hasAutoMarker = /🅰️|オート|AUTO/i.test(source);
@@ -136,7 +136,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=skip-original-set-review`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=black-star-note`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
