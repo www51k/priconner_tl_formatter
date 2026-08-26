@@ -111,6 +111,7 @@ class TlProcessingTests(unittest.TestCase):
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')
+        self.assertEqual(format_text('【〇〇－－－】オートオフ\n'), '[54---]🅰️OFF\n')
 
 
 if __name__ == "__main__":
