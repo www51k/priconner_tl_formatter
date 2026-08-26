@@ -14,6 +14,7 @@ const formationList = document.querySelector("#formation-list");
 
 let pyodidePromise;
 let draggedSlot = null;
+let formationTouched = false;
 
 function updateSlotNumbers() {
   [...formationList.children].forEach((slot, index) => {
@@ -24,6 +25,7 @@ function updateSlotNumbers() {
 
 formationList.addEventListener("dragstart", (event) => {
   draggedSlot = event.target.closest(".formation-slot");
+  formationTouched = true;
   if (draggedSlot) draggedSlot.classList.add("dragging");
 });
 formationList.addEventListener("dragend", () => {
@@ -38,6 +40,35 @@ formationList.addEventListener("dragover", (event) => {
   formationList.insertBefore(draggedSlot, event.clientX < rect.left + rect.width / 2 ? target : target.nextSibling);
   updateSlotNumbers();
 });
+
+formationList.addEventListener("input", () => {
+  formationTouched = true;
+});
+
+function pickCharacters(source) {
+  const excluded = new Set(["バトル開始", "ボス", "止めぽ", "AUTO", "オート"]);
+  const names = [];
+  for (const rawLine of source.split("\n")) {
+    const line = rawLine.split("//", 1)[0]
+      .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*/, "")
+      .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
+      .replace(/^→\s*/, "");
+    if (!line || line.startsWith("[") || line.startsWith("【")) continue;
+    const match = line.match(/^([^\s　\[\]【】「"']+)(?=[\s　\[【「"']|$)/);
+    const name = match?.[1];
+    if (name && !excluded.has(name) && name.length <= 8 && !names.includes(name)) names.push(name);
+    if (names.length === 5) break;
+  }
+  return names;
+}
+
+function autofillFormation(source) {
+  if (formationTouched) return;
+  const names = pickCharacters(source);
+  [...formationList.querySelectorAll("input")].forEach((field, index) => {
+    field.value = names[index] || "";
+  });
+}
 
 function formationHeader() {
   const names = [...formationList.querySelectorAll("input")].map((field) => field.value.trim());
@@ -67,7 +98,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=formation-input`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=autofill-characters`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -134,12 +165,15 @@ json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure
 }
 
 formatButton.addEventListener("click", formatTL);
+input.addEventListener("input", () => autofillFormation(input.value));
 clearButton.addEventListener("click", () => {
   input.value = "";
   output.value = "";
   copyButton.disabled = true;
   validation.hidden = true;
   review.hidden = true;
+  formationTouched = false;
+  autofillFormation("");
   setStatus("準備完了", "ready");
 });
 copyButton.addEventListener("click", async () => {
