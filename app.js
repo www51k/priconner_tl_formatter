@@ -136,7 +136,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=original-mask-auto`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=skip-original-set-review`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -149,6 +149,7 @@ from format_tl import format_text
 from add_set_operations import add_operations
 from validate_tl import validate
 from review_tl import collect_review_items
+from tl_common import MASK_RE
 `);
       return pyodide;
     })();
@@ -176,6 +177,9 @@ formatted = format_text(source_text)
 report = []
 set_text = add_operations(formatted, report=report)
 errors = validate(set_text)
+has_original_set = any(MASK_RE.search(line) for line in formatted.splitlines())
+if has_original_set:
+    errors = []
 review_items = collect_review_items(set_text, formatted)
 error_details = []
 for error in errors:

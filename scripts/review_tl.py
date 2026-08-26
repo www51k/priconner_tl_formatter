@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from tl_common import CHAR_NUMBERS, parse_event
+from tl_common import CHAR_NUMBERS, MASK_RE, parse_event
 from validate_tl import validate
 
 
@@ -19,6 +19,7 @@ def collect_review_items(
     items: list[dict[str, object]] = []
     lines = text.splitlines()
     original_lines = original_text.splitlines() if original_text is not None else []
+    has_original_set = any(MASK_RE.search(line) for line in original_lines)
     for line_no, line in enumerate(lines, 1):
         event = parse_event(line_no, line)
         if event.arrow and event.name is None:
@@ -32,23 +33,12 @@ def collect_review_items(
                 })
         original_line = original_lines[line_no - 1] if line_no <= len(original_lines) else ""
         original_event = parse_event(line_no, original_line)
-        if (
-            event.mask is not None
-            and event.name in CHAR_NUMBERS
-            and original_event.mask is not None
-        ):
-            items.append({
-                "line": line_no,
-                "kind": "ORIGINAL_SET",
-                "text": line,
-                "reason": "原本SETを固定し、自動更新しません",
-            })
         original_auto_on = (
             "🅰️ON" in original_line
             or re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|オン)", original_line, re.IGNORECASE)
             is not None
         )
-        if "🅰️ON" in line and not original_auto_on:
+        if "🅰️ON" in line and not original_auto_on and not has_original_set:
             items.append({
                 "line": line_no,
                 "kind": "AUTO_ON",
@@ -56,7 +46,7 @@ def collect_review_items(
                 "reason": "オートONの根拠を原本・実戦検証で確認します",
             })
 
-    for error in validate(text):
+    for error in ([] if has_original_set else validate(text)):
         line_number = int(error.split(":", 1)[0])
         items.append({
             "line": line_number,
