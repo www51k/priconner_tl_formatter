@@ -161,6 +161,14 @@ class TlProcessingTests(unittest.TestCase):
         formatted = format_text(text)
         self.assertEqual(formatted.count("→"), 2)
 
+    def test_validation_uses_character_numbers_from_formation_header(self) -> None:
+        text = (
+            "[(5)フブキ|(4)シェフィ|(3)アオイ|(2)ペコ|(1)ネラ]\n"
+            "[--321]\n"
+            "⭐️0:55　シェフィ\n"
+        )
+        self.assertEqual(validate(text), [])
+
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')

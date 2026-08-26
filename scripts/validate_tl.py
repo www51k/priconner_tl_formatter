@@ -13,6 +13,10 @@ from tl_common import CHAR_NUMBERS, MASK_RE, numbers_from_mask, parse_event
 
 def validate(text: str) -> list[str]:
     errors: list[str] = []
+    character_numbers = dict(CHAR_NUMBERS)
+    for line in text.splitlines():
+        for match in re.finditer(r"\(([54321])\)([^|)\]]+)", line):
+            character_numbers[match.group(2).strip()] = match.group(1)
     state: set[str] = set()
     previous_mask: str | None = None
 
@@ -27,12 +31,12 @@ def validate(text: str) -> list[str]:
             previous_mask = mask
             continue
 
-        if not event.name or event.name not in CHAR_NUMBERS:
+        if not event.name or event.name not in character_numbers:
             if mask is not None:
                 state = numbers_from_mask(mask)
                 previous_mask = mask
             continue
-        number = CHAR_NUMBERS[event.name]
+        number = character_numbers[event.name]
         if event.star and number in state:
             errors.append(f"{line_no}: ⭐️手動対象の{event.name}がSET内にあります")
         if not event.star and number not in state:
