@@ -136,7 +136,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=validation-fstring-fix`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=validation-spacing`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -194,7 +194,7 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
       review.hidden = false;
     }
     if (data.errors.length) {
-      validation.textContent = `検証エラー（${data.errors.length}件）\n${data.error_details.join("\n")}`;
+      validation.textContent = `検証エラー（${data.errors.length}件）\n\n${data.error_details.join("\n\n")}`;
       validation.hidden = false;
       setStatus("整形完了・要確認", "error");
     } else {
