@@ -12,6 +12,7 @@ const review = document.querySelector("#review");
 const reviewContent = document.querySelector("#review-content");
 const formationList = document.querySelector("#formation-list");
 const diagnosis = document.querySelector("#tl-diagnosis");
+const formationPanel = document.querySelector("#formation-panel");
 
 let pyodidePromise;
 let draggedSlot = null;
@@ -74,6 +75,7 @@ function autofillFormation(source) {
 function diagnoseTL(source) {
   if (!source.trim()) {
     diagnosis.textContent = "TLを貼り付けると、自動判定します";
+    formationPanel.hidden = true;
     return;
   }
   const hasManualMarker = /⭐️|⭐︎|⭐|★/.test(source);
@@ -84,12 +86,16 @@ function diagnoseTL(source) {
   );
   if (hasSetOperation) {
     diagnosis.innerHTML = "判定：<strong>セミオ扱い</strong>（SET操作あり。SET操作は不要として扱います）";
+    formationPanel.hidden = true;
   } else if (hasManualMarker) {
     diagnosis.innerHTML = "判定：<strong>手動TL</strong>（⭐️などの手動発動記号あり）";
+    formationPanel.hidden = false;
   } else if (hasAutoMarker) {
     diagnosis.innerHTML = "判定：<strong>セミオ候補</strong>（手動発動記号なし・オート表記あり）";
+    formationPanel.hidden = true;
   } else {
     diagnosis.innerHTML = "判定：<strong>セミオ候補</strong>（手動発動記号なし）";
+    formationPanel.hidden = true;
   }
 }
 
@@ -101,6 +107,7 @@ function formationHeader() {
 }
 
 function applyFormation(source, header) {
+  if (!header) return source;
   const lines = source.split("\n");
   if (lines[0]?.trim().startsWith("[") && (lines[0].includes("(5)") || /\[[54321O〇○◯X×－ー＿-]{5}\]/.test(lines[0]))) {
     lines.shift();
@@ -121,7 +128,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=keyerror-fix`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=hide-semi-formation`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -151,7 +158,7 @@ async function formatTL() {
   validation.hidden = true;
   review.hidden = true;
   try {
-    const header = formationHeader();
+    const header = formationPanel.hidden ? null : formationHeader();
     const sourceWithFormation = applyFormation(source, header);
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", sourceWithFormation);

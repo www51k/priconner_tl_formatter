@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="プリコネTLをブラウザ内で整形するツール">
     <title>TL Formatter</title>
-    <link rel="stylesheet" href="app.css?v=keyerror-fix">
+    <link rel="stylesheet" href="app.css?v=hide-semi-formation">
   </head>
   <body>
     <main class="shell">
@@ -15,7 +15,7 @@
         <p>TLを貼り付けて、書式とSET操作をまとめて整形します。</p>
       </header>
 
-      <section class="panel formation-panel">
+      <section id="formation-panel" class="panel formation-panel" hidden>
         <div class="panel-heading">
           <div>
             <span class="step">00</span>
@@ -70,6 +70,6 @@
         <span>TL Formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=keyerror-fix"></script>
+    <script type="module" src="app.js?v=hide-semi-formation"></script>
   </body>
 </html>
