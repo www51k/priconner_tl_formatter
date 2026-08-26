@@ -10,8 +10,49 @@ const status = document.querySelector("#status");
 const validation = document.querySelector("#validation");
 const review = document.querySelector("#review");
 const reviewContent = document.querySelector("#review-content");
+const formationList = document.querySelector("#formation-list");
 
 let pyodidePromise;
+let draggedSlot = null;
+
+function updateSlotNumbers() {
+  [...formationList.children].forEach((slot, index) => {
+    slot.querySelector(".slot-number").textContent = String(5 - index);
+    slot.querySelector("input").setAttribute("aria-label", `${5 - index}番キャラ`);
+  });
+}
+
+formationList.addEventListener("dragstart", (event) => {
+  draggedSlot = event.target.closest(".formation-slot");
+  if (draggedSlot) draggedSlot.classList.add("dragging");
+});
+formationList.addEventListener("dragend", () => {
+  if (draggedSlot) draggedSlot.classList.remove("dragging");
+  draggedSlot = null;
+});
+formationList.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  const target = event.target.closest(".formation-slot");
+  if (!draggedSlot || !target || target === draggedSlot) return;
+  const rect = target.getBoundingClientRect();
+  formationList.insertBefore(draggedSlot, event.clientX < rect.left + rect.width / 2 ? target : target.nextSibling);
+  updateSlotNumbers();
+});
+
+function formationHeader() {
+  const names = [...formationList.querySelectorAll("input")].map((field) => field.value.trim());
+  if (names.some((name) => !name)) throw new Error("編成の5人すべてにキャラ名を入力してください");
+  if (new Set(names).size !== names.length) throw new Error("編成内のキャラ名が重複しています");
+  return `[${names.map((name, index) => `(${5 - index})${name}`).join("|")}]`;
+}
+
+function applyFormation(source, header) {
+  const lines = source.split("\n");
+  if (lines[0]?.trim().startsWith("[") && (lines[0].includes("(5)") || /\[[54321O〇○◯X×－ー＿-]{5}\]/.test(lines[0]))) {
+    lines.shift();
+  }
+  return `${header}\n${lines.join("\n")}`;
+}
 
 function setStatus(message, kind = "") {
   status.textContent = message;
@@ -26,7 +67,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=7a3a849`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=formation-input`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -56,8 +97,10 @@ async function formatTL() {
   validation.hidden = true;
   review.hidden = true;
   try {
+    const header = formationHeader();
+    const sourceWithFormation = applyFormation(source, header);
     const pyodide = await loadPython();
-    pyodide.globals.set("source_text", source);
+    pyodide.globals.set("source_text", sourceWithFormation);
     const result = await pyodide.runPythonAsync(`
 import json
 formatted = format_text(source_text)

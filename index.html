@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="プリコネTLをブラウザ内で整形するツール">
     <title>TL Formatter</title>
-    <link rel="stylesheet" href="app.css?v=7a3a849">
+    <link rel="stylesheet" href="app.css?v=formation-input">
   </head>
   <body>
     <main class="shell">
@@ -14,6 +14,23 @@
         <h1>TL Formatter</h1>
         <p>TLを貼り付けて、書式とSET操作をまとめて整形します。</p>
       </header>
+
+      <section class="panel formation-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="step">00</span>
+            <h2>編成</h2>
+          </div>
+          <span class="hint">カードをドラッグして左右に並べ替え</span>
+        </div>
+        <div id="formation-list" class="formation-list" aria-label="キャラ編成 5 4 3 2 1">
+          <div class="formation-slot" draggable="true"><span class="slot-number">5</span><input value="" aria-label="5番キャラ" placeholder="キャラ名"></div>
+          <div class="formation-slot" draggable="true"><span class="slot-number">4</span><input value="" aria-label="4番キャラ" placeholder="キャラ名"></div>
+          <div class="formation-slot" draggable="true"><span class="slot-number">3</span><input value="" aria-label="3番キャラ" placeholder="キャラ名"></div>
+          <div class="formation-slot" draggable="true"><span class="slot-number">2</span><input value="" aria-label="2番キャラ" placeholder="キャラ名"></div>
+          <div class="formation-slot" draggable="true"><span class="slot-number">1</span><input value="" aria-label="1番キャラ" placeholder="キャラ名"></div>
+        </div>
+      </section>
 
       <section class="panel input-panel">
         <div class="panel-heading">
@@ -52,6 +69,6 @@
         <span>TL Formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=7a3a849"></script>
+    <script type="module" src="app.js?v=formation-input"></script>
   </body>
 </html>
