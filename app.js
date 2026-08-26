@@ -125,7 +125,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=set-only-mode`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=manual-without-symbol`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -164,12 +164,15 @@ async function formatTL() {
 import json
 formatted = format_text(source_text)
 report = []
-set_text = add_operations(formatted, report=report)
-errors = validate(set_text)
 has_original_set = any(MASK_RE.search(line) for line in formatted.splitlines())
 if has_original_set:
+    set_text = add_operations(formatted, report=report)
     errors = []
-review_items = collect_review_items(set_text, formatted)
+    review_items = collect_review_items(set_text, formatted)
+else:
+    set_text = formatted
+    errors = []
+    review_items = []
 error_details = []
 for error in errors:
     line_number = int(error.split(":", 1)[0])
