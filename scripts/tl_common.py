@@ -29,7 +29,11 @@ def normalize_input_line(line: str) -> str:
     head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("❌", "X")
     has_formation = FORMATION_RE.search(head) is not None
-    has_auto = re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)", head, re.IGNORECASE) is not None
+    has_auto = re.search(
+        r"(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)|🅰️(?:ON|OFF)",
+        head,
+        re.IGNORECASE,
+    ) is not None
     if not has_formation and not has_auto and not re.match(
         r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)?[ \t　]*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=[ \t　])|->|>|→|➡︎|⇨|⇒)",
         source,
