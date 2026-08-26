@@ -168,7 +168,7 @@ def parse_event(line_no: int, line: str) -> Event:
             prefix = line[: line.find(name)]
 
     # 開始行・ボス行はキャラクター発動ではない。
-    if name in {"バトル開始", "ボス", "止めぽ"}:
+    if name in {"開始時", "開始", "バトル開始", "ボス", "止めぽ"}:
         name = None
 
     return Event(line_no, line, prefix, name, star, arrow, mask)

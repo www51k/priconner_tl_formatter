@@ -122,6 +122,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertTrue(result.startswith("1:30"))
         self.assertNotIn("[-----]", result)
 
+    def test_start_label_is_not_treated_as_character(self) -> None:
+        text = "1:30　開始時　〇－〇〇〇　オートOFF\n1:18　アオイ　〇－〇－〇\n"
+        result = add_operations(format_text(text))
+        self.assertIn("開始時", result)
+
     def test_auto_off_is_inserted_at_the_top(self) -> None:
         result = add_operations("⭐️0:10　アオイ\n")
         self.assertTrue(result.startswith("[-----]🅰️OFF\n\n"))
