@@ -56,6 +56,7 @@ function pickCharacters(source) {
       .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
       .replace(/^→\s*/, "");
     if (!line || line.startsWith("[") || line.startsWith("【")) continue;
+    if (/^(?:タゲ|ターゲット)/.test(line) || /^(?:[ABC]\s*\/\s*)+[ABC]$/.test(line)) continue;
     const match = line.match(/^([^\s　\[\]【】「"']+)(?=[\s　\[【「"']|$)/);
     const name = match?.[1];
     if (
@@ -131,7 +132,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=ignore-target-note`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=ignore-target-abc`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
