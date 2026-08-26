@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="プリコネTLをブラウザ内で整形するツール">
     <title>TL Formatter</title>
-    <link rel="stylesheet" href="app.css?v=autofill-characters">
+    <link rel="stylesheet" href="app.css?v=diagnosis">
   </head>
   <body>
     <main class="shell">
@@ -30,6 +30,7 @@
           <div class="formation-slot" draggable="true"><span class="slot-number">2</span><input value="" aria-label="2番キャラ" placeholder="キャラ名"></div>
           <div class="formation-slot" draggable="true"><span class="slot-number">1</span><input value="" aria-label="1番キャラ" placeholder="キャラ名"></div>
         </div>
+        <div id="tl-diagnosis" class="diagnosis" aria-live="polite">TLを貼り付けると、自動判定します</div>
       </section>
 
       <section class="panel input-panel">
@@ -69,6 +70,6 @@
         <span>TL Formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=autofill-characters"></script>
+    <script type="module" src="app.js?v=diagnosis"></script>
   </body>
 </html>

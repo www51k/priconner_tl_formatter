@@ -11,6 +11,7 @@ const validation = document.querySelector("#validation");
 const review = document.querySelector("#review");
 const reviewContent = document.querySelector("#review-content");
 const formationList = document.querySelector("#formation-list");
+const diagnosis = document.querySelector("#tl-diagnosis");
 
 let pyodidePromise;
 let draggedSlot = null;
@@ -70,6 +71,22 @@ function autofillFormation(source) {
   });
 }
 
+function diagnoseTL(source) {
+  if (!source.trim()) {
+    diagnosis.textContent = "TLを貼り付けると、自動判定します";
+    return;
+  }
+  const hasManualMarker = /⭐️|⭐︎|⭐|★/.test(source);
+  const hasAutoMarker = /🅰️|オート|AUTO/i.test(source);
+  if (hasManualMarker) {
+    diagnosis.innerHTML = "判定：<strong>手動TL</strong>（⭐️などの手動発動記号あり）";
+  } else if (hasAutoMarker) {
+    diagnosis.innerHTML = "判定：<strong>セミオ候補</strong>（手動発動記号なし・オート表記あり）";
+  } else {
+    diagnosis.innerHTML = "判定：<strong>セミオ候補</strong>（手動発動記号なし）";
+  }
+}
+
 function formationHeader() {
   const names = [...formationList.querySelectorAll("input")].map((field) => field.value.trim());
   if (names.some((name) => !name)) throw new Error("編成の5人すべてにキャラ名を入力してください");
@@ -98,7 +115,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=autofill-characters`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=diagnosis`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -165,7 +182,10 @@ json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure
 }
 
 formatButton.addEventListener("click", formatTL);
-input.addEventListener("input", () => autofillFormation(input.value));
+input.addEventListener("input", () => {
+  autofillFormation(input.value);
+  diagnoseTL(input.value);
+});
 clearButton.addEventListener("click", () => {
   input.value = "";
   output.value = "";
@@ -174,6 +194,7 @@ clearButton.addEventListener("click", () => {
   review.hidden = true;
   formationTouched = false;
   autofillFormation("");
+  diagnoseTL("");
   setStatus("準備完了", "ready");
 });
 copyButton.addEventListener("click", async () => {

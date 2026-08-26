@@ -34,6 +34,8 @@ h2 { margin: 0; font-size: 1.1rem; }
 .slot-number { display: block; color: var(--accent); font: 800 .75rem ui-monospace, monospace; margin-bottom: 8px; }
 .formation-slot input { width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 4px 0; background: transparent; color: var(--text); font: inherit; outline: none; }
 .formation-slot input:focus { border-color: var(--accent); }
+.diagnosis { margin-top: 14px; color: var(--muted); font-size: .86rem; }
+.diagnosis strong { color: var(--accent); }
 textarea { display: block; width: 100%; min-height: 270px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #0a0f15; color: var(--text); font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; outline: none; }
 textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224,179,.12); }
 .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
