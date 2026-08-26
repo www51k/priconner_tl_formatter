@@ -142,6 +142,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("→　ルルィ", formatted)
         self.assertIn("→　シオリ", formatted)
 
+    def test_same_second_events_are_rendered_as_arrows(self) -> None:
+        text = "0:49　スミレ\n0:49　ルルィ\n0:49　シオリ\n"
+        formatted = format_text(text)
+        self.assertEqual(formatted.count("→"), 2)
+
     def test_japanese_auto_labels_are_normalized(self) -> None:
         formatted = format_text('【〇〇－－－】"オートオフ"\n')
         self.assertEqual(formatted, '[54---]🅰️OFF\n')
