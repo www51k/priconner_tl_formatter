@@ -136,7 +136,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=ignore-start-python`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=validation-target-line`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -177,7 +177,12 @@ report = []
 set_text = add_operations(formatted, report=report)
 errors = validate(set_text)
 review_items = collect_review_items(set_text, formatted)
-json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure_ascii=False)
+error_details = []
+for error in errors:
+    line_number = int(error.split(":", 1)[0])
+    target_line = set_text.splitlines()[line_number - 1] if line_number > 0 else ""
+    error_details.append(f"{error}\n対象行: {target_line}")
+json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
     output.value = data.text;
@@ -189,7 +194,7 @@ json.dumps({"text": set_text, "errors": errors, "review": review_items }, ensure
       review.hidden = false;
     }
     if (data.errors.length) {
-      validation.textContent = `検証エラー（${data.errors.length}件）\n${data.errors.join("\n")}`;
+      validation.textContent = `検証エラー（${data.errors.length}件）\n${data.error_details.join("\n")}`;
       validation.hidden = false;
       setStatus("整形完了・要確認", "error");
     } else {
