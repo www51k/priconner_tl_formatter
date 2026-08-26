@@ -56,6 +56,7 @@ def normalize_input_line(line: str) -> str:
         head,
         flags=re.IGNORECASE,
     )
+    head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)", "⭐️", head)
     head = re.sub(r"^[ \t　]*(?:->|>|➡︎|⇨|⇒)", "　　→", head)
     head = re.sub(r"[ \t]+", "　", head)
