@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from add_set_operations import add_operations  # noqa: E402
 from format_tl import format_text  # noqa: E402
+from tl_common import character_names_from_formation  # noqa: E402
 from validate_tl import validate  # noqa: E402
 from review_tl import collect_review_items  # noqa: E402
 
@@ -85,6 +86,13 @@ class TlProcessingTests(unittest.TestCase):
         kinds = {item["kind"] for item in collect_review_items(formatted, source)}
         self.assertEqual(kinds, {"AUTO_ON"})
 
+    def test_review_queue_flags_manual_ub_regardless_of_set_state(self) -> None:
+        text = "[54321]🅰️ON\n⭐️0:10　アオイ\n"
+        items = collect_review_items(text, text)
+        ub_items = [item for item in items if item["kind"] == "UB_REVIEW"]
+        self.assertEqual(len(ub_items), 1)
+        self.assertIn("SET・オート状態に関係なく", ub_items[0]["reason"])
+
     def test_structural_preprocessing_preserves_comments(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
@@ -106,6 +114,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("[-4---]🅰️OFF　（オート）", formatted)
         self.assertNotIn("]on", formatted)
         self.assertNotIn("]off", formatted)
+
+    def test_quoted_bare_auto_means_auto_on(self) -> None:
+        formatted = format_text('0:27　波レ　"オート"\n⇒猫　"オート"\n')
+        self.assertIn("0:27　波レ　　　🅰️ON", formatted)
+        self.assertIn("→　猫　　　　🅰️ON", formatted)
 
     def test_single_quote_between_set_and_auto_is_removed(self) -> None:
         self.assertEqual(
@@ -163,6 +176,13 @@ class TlProcessingTests(unittest.TestCase):
             "⭐️1:20　クリア\n　　　→　レイ\n",
         )
 
+    def test_indented_time_row_uses_three_space_arrow_indent(self) -> None:
+        text = "　0:30　フブキ　　[54321]\n　　→　シェフィ　[5--2-]🅰️ON\n"
+        self.assertEqual(
+            format_text(text),
+            "　0:30　フブキ　　[54321]\n　　　→　シェフィ　[5--2-]🅰️ON\n",
+        )
+
     def test_non_star_time_is_indented_when_same_bucket_has_manual_ub(self) -> None:
         text = (
             "0:09　ネネカ　　[54321]　➡　クルル後✕OOO✕\n"
@@ -213,7 +233,7 @@ class TlProcessingTests(unittest.TestCase):
         )
         self.assertEqual(
             formatted,
-            "1:12　ボス　　　コメント\n⭐️1:12　ボス　　　コメント\n",
+            "　1:12　ボス　　　コメント\n⭐️　　→　ボス　''コメント\n",
         )
 
     def test_enemy_labels_inside_comments_are_preserved(self) -> None:
@@ -232,6 +252,18 @@ class TlProcessingTests(unittest.TestCase):
             format_text("\\---00:33 バイオドーザー　---[4.06億]\n"),
             "0:33　ボス　　　[4.06億]\n",
         )
+
+    def test_no_formation_character_names_and_triangle_marker_are_formatted(self) -> None:
+        formatted = format_text(
+            "☆1:17　猫　通常Hit最速\n"
+            "△1:06　尻　秒数最速\n"
+            "⇒ちぇる\n"
+            "0:57　尻　//アローcl起動\n"
+        )
+        self.assertIn("⭐️1:17　猫", formatted)
+        self.assertIn("🔺1:06　尻", formatted)
+        self.assertIn("→　ちぇる", formatted)
+        self.assertIn("//アローcl起動", formatted)
 
     def test_enemy_ub_in_battle_header_becomes_boss(self) -> None:
         self.assertEqual(
@@ -252,6 +284,41 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("1:16　サレン", formatted)
         self.assertIn("0:17　フィオ", formatted)
         self.assertIn("⭐️1:02　ペコ", formatted)
+
+    def test_tl_display_declarations_override_formal_name_display(self) -> None:
+        text = "すみれ\nTL表記は波レ\n1:17　すみれ\n"
+        self.assertIn("1:17　すみれ", format_text(text))
+
+    def test_tl_display_declarations_convert_short_name_to_formal_name(self) -> None:
+        text = "すみれ\nTL表記は波レ\n0:55　波レ\n"
+        self.assertIn("0:55　すみれ", format_text(text))
+
+    def test_tl_declaration_order_provides_set_positions(self) -> None:
+        text = (
+            "すみれ\nTL表記は波レ\nタマキ\nTL表記は猫\n"
+            "チエル\nTL表記はちぇる\nシオリ\nTL表記は尻\n"
+            "ティア\nTL表記はティア\n0:55　波レ\n"
+        )
+        self.assertEqual(character_names_from_formation(text)["波レ"], "5")
+
+    def test_manual_line_comments_get_double_quote_marker(self) -> None:
+        self.assertIn("⭐️0:10　アオイ　''通常Hit最速", format_text("⭐️0:10　アオイ　通常Hit最速\n"))
+        self.assertIn("⭐️0:10　アオイ　　//既存コメント", format_text("⭐️0:10　アオイ　//既存コメント\n"))
+
+    def test_symbolic_tl_indents_unmarked_timed_lines(self) -> None:
+        formatted = format_text("⭐️0:20　アオイ\n0:19　ネラ\n0:18　ボス\n")
+        self.assertIn("　0:19　ネラ", formatted)
+        self.assertIn("　0:18　ボス", formatted)
+
+    def test_same_time_manual_line_keeps_star_and_becomes_arrow(self) -> None:
+        formatted = format_text(
+            "🔺1:06　シオリ\n⇒チエル\n⭐️1:06　タマキ　アイスバフ最速\n"
+        )
+        self.assertIn("⭐️　　→　タマキ　''アイスバフ最速", formatted)
+        self.assertNotIn("⭐️1:06　タマキ", formatted)
+
+    def test_backslash_only_separator_lines_are_removed(self) -> None:
+        self.assertEqual(format_text("1:00　アオイ\n\\\\\n0:59　ネラ\n").count("\\"), 0)
 
     def test_formation_symbols_convert_to_fixed_mask(self) -> None:
         text = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
@@ -367,15 +434,15 @@ class TlProcessingTests(unittest.TestCase):
     def test_arrow_variants_are_normalized(self) -> None:
         self.assertEqual(format_text("⇒ユニ\n"), "　　→　ユニ\n")
 
-    def test_same_second_manual_ub_is_not_converted_to_arrow(self) -> None:
+    def test_same_second_manual_ub_is_converted_to_arrow(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
             "0:57　ペコ\n"
             "⭐️0:57-56　シェフィ　''汐沓cl最速\n"
         )
         formatted = format_text(text)
-        self.assertIn("⭐️0:57-56　シェフィ", formatted)
-        self.assertNotIn("→　シェフィ", formatted)
+        self.assertIn("⭐️　　→　シェフィ", formatted)
+        self.assertIn("→　シェフィ", formatted)
 
     def test_inserts_one_blank_line_at_ten_second_boundaries(self) -> None:
         text = "0:21　アオイ\n0:20　ペコ\n0:19　ツムギ\n0:10　ネラ\n0:09　シェフィ\n"
@@ -396,7 +463,7 @@ class TlProcessingTests(unittest.TestCase):
             format_text(text),
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
             "⭐️0:20　アオイ\n[5-3--]\n"
-            "\n0:19　ツムギ　　[5-3--]\n",
+            "\n　0:19　ツムギ　　[5-3--]\n",
         )
 
     def test_spreadsheet_formal_names_render_as_abbreviations(self) -> None:

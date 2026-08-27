@@ -48,7 +48,7 @@ def normalize_input_line(line: str) -> str:
     head = re.sub(r"敵", "ボス", head)
     # 時刻の前後を装飾線で囲んだボス行も、装飾を外して通常行にする。
     decorated_boss = re.match(
-        r"^[\\\-_=~]+(\d{1,2}:\d{1,2})\s*ボス[\\\-_=~]*(.*)$",
+        r"^[\\\-_=~ー]+(\d{1,2}:\d{1,2})\s*ボス[\\\-_=~ー]*(.*)$",
         head,
         flags=re.IGNORECASE,
     )
@@ -58,7 +58,7 @@ def normalize_input_line(line: str) -> str:
         # ボス名が一覧にない場合でも、装飾線で囲まれた時刻＋ダメージ
         # 表記はボス行として扱う（例: バイオドーザー ---[4.06億]）。
         decorated_boss_record = re.match(
-            r"^[\\\-_=~]+(\d{1,2}:\d{1,2})\s+.+?\s+[\\\-_=~]+\s*(\[[^\n\]]+\])\s*$",
+            r"^[\\\-_=~ー]+(\d{1,2}:\d{1,2})\s+.+?\s+[\\\-_=~ー]+\s*(\[[^\n\]]+\])\s*$",
             head,
             flags=re.IGNORECASE,
         )
@@ -76,7 +76,7 @@ def normalize_input_line(line: str) -> str:
         re.IGNORECASE,
     ) is not None
     if not has_formation and not has_auto and not re.match(
-        r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)?[ \t　]*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=[ \t　])|->|>|→|➡︎|⇨|⇒)",
+        r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆|△)?[ \t　]*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=[ \t　])|->|>|→|➡︎|⇨|⇒)",
         source,
     ):
         # 時刻のない発動行も、数値SETマスクがあれば構造行として扱う。
@@ -120,6 +120,10 @@ def normalize_input_line(line: str) -> str:
     bold_auto = r"\*\*((?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ))\*\*"
     auto_head = re.sub(bold_auto, r"\1", auto_head, flags=re.IGNORECASE)
     auto_tail = re.sub(bold_auto, r"\1", auto_tail, flags=re.IGNORECASE)
+    # 引用符で単独指定された「オート」は操作ONを意味する。
+    # 文章中の「オート」は対象にしない。
+    auto_head = re.sub(r'''["「『](?:オート|AUTO)["」』]''', "🅰️ON", auto_head, flags=re.IGNORECASE)
+    auto_tail = re.sub(r'''["「『](?:オート|AUTO)["」』]''', "🅰️ON", auto_tail, flags=re.IGNORECASE)
     auto_head = re.sub(
         r'''["「『]?(?:オート|AUTO)[ \t　]*(ON|OFF|オン|オフ)["」』]?''',
         lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",
@@ -142,6 +146,7 @@ def normalize_input_line(line: str) -> str:
     head = re.sub(r"(?<!')['’](?=🅰️)|(?<=🅰️)['’](?!')", "", head)
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)", "⭐️", head)
+    head = re.sub(r"^[ \t　]*△", "🔺", head)
     # 投稿では時刻の後ろに手動記号が置かれることがあるが、手動UBの
     # 判定と表示を一貫させるため時刻の前へ移す。
     head = re.sub(
@@ -166,6 +171,47 @@ class Event:
     mask: str | None
 
 
+def tl_declarations(text: str) -> list[tuple[str, str]]:
+    """TL前の正式名・TL表記一覧を抽出する。最後の省略にも対応する。"""
+    lines = text.splitlines()
+    first_event = next(
+        (i for i, line in enumerate(lines) if re.search(r"(?:\d{1,2}:\d{1,2}|⭐️|☆|△|⇒|→)", line)),
+        len(lines),
+    )
+    declarations: list[tuple[str, str]] = []
+    for index, line in enumerate(lines[:first_event]):
+        formal = line.strip()
+        if (
+            not formal
+            or formal.startswith(("\\", "ーー", "--", "//", "TL表記"))
+            or re.search(r"[ \t　]", formal)
+        ):
+            continue
+        next_index = index + 1
+        while next_index < first_event and (
+            not lines[next_index].strip()
+            or re.fullmatch(r"\\+", lines[next_index].strip())
+        ):
+            next_index += 1
+        tl_match = (
+            re.fullmatch(r"TL表記は\s*(\S+)", lines[next_index].strip())
+            if next_index < first_event
+            else None
+        )
+        if tl_match:
+            declarations.append((formal, tl_match.group(1)))
+            continue
+        previous_index = index - 1
+        while previous_index >= 0 and (
+            not lines[previous_index].strip()
+            or re.fullmatch(r"\\+", lines[previous_index].strip())
+        ):
+            previous_index -= 1
+        if previous_index >= 0 and lines[previous_index].strip().startswith("TL表記は"):
+            declarations.append((formal, formal))
+    return declarations
+
+
 def character_names_from_formation(text: str) -> dict[str, str]:
     """編成表から正式名・略称と固定番号の対応を取り出す。"""
     numbers: dict[str, str] = {}
@@ -177,7 +223,25 @@ def character_names_from_formation(text: str) -> dict[str, str]:
             alias = DISPLAY_NAMES.get(formal_name)
             if alias and alias not in numbers:
                 numbers[alias] = number
+    # 編成表がない投稿では、TL前の正式名／TL表記の5人の列挙順を
+    # 記載順（1,2,3,4,5）をSET位置（5,4,3,2,1）へ対応させる。
+    declarations = tl_declarations(text)
+    if len(declarations) == 5:
+        for number, (formal, tl_name) in zip("54321", declarations):
+            numbers.setdefault(formal, number)
+            numbers.setdefault(tl_name, number)
     return numbers
+
+
+def display_names_from_tl_declarations(text: str) -> dict[str, str]:
+    """本文冒頭の「正式名／TL表記」宣言を表示名へ反映する。"""
+    aliases: dict[str, str] = {}
+    for formal, tl_name in tl_declarations(text):
+            # 本文のTL表記を正式名へ戻す。正式名が本文に直接書かれて
+            # いる場合も、同じ正式名のまま表示できるよう登録する。
+            aliases[formal] = formal
+            aliases[tl_name] = formal
+    return aliases
 
 
 def mask_for(numbers: set[str]) -> str:
@@ -215,7 +279,7 @@ def normalize_time_prefix(prefix: str) -> str:
 
 def is_event_line(line: str) -> bool:
     stripped = line.lstrip("　 \t")
-    stripped = re.sub(r"^(?:⭐️|⭐︎|⭐|🔺)+", "", stripped).lstrip("　 \t")
+    stripped = re.sub(r"^(?:⭐️|⭐︎|⭐|🔺|△)+", "", stripped).lstrip("　 \t")
     if bool(TIME_RE.match(stripped) or BARE_TIME_RE.match(stripped)) or stripped.startswith("→"):
         return True
     # 時刻を省略した矢印先・発動行（例: 「ルルィ [54321]」）を認識する。
@@ -285,6 +349,20 @@ def parse_event(
             name = generic.group(1)
             prefix = line[: line.find(name)]
 
+    if name is None and is_event_line(line) and TIME_RE.search(line):
+        # 編成表のない投稿では、短いキャラ名が時刻直後に現れる。
+        # コメントや説明文を名前と誤認しないよう、時刻直後の先頭語だけを対象にする。
+        body = line
+        body = re.sub(r"^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*", "", body)
+        body = re.sub(r"^(?:\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?|\d{1,2})\s*", "", body)
+        body = re.sub(r"^(?:→|⇒|->|>|➡︎|➡|⇨)\s*", "", body)
+        generic = re.match(r"([^\s　\[\]【】()（）'\"「」『』]+)", body)
+        if generic and len(generic.group(1)) <= 8:
+            candidate = generic.group(1)
+            if candidate not in {"開始時", "開始", "バトル開始", "ボス", "止めぽ"}:
+                name = candidate
+                prefix = line[: line.find(candidate)]
+
     if name is None:
         # 時刻付きの未登録キャラも、編成表から後で番号を解決できるよう抽出する。
         body = line
@@ -310,6 +388,7 @@ def render_event(
     event: Event,
     mask: str | None = None,
     allow_long_name: bool = False,
+    display_names: dict[str, str] | None = None,
 ) -> str:
     """イベント行のキャラ欄とSET表記を正規化する。"""
     if not event.name:
@@ -322,7 +401,7 @@ def render_event(
     else:
         prefix += "　"
 
-    display_name = DISPLAY_NAMES.get(event.name, event.name)
+    display_name = (display_names or DISPLAY_NAMES).get(event.name, event.name)
     if len(display_name) > 4 and not allow_long_name:
         raise ValueError(f"表示名が全角4文字を超えています。4文字略称を登録してください: {event.name}")
     name_field = display_name + "　" * max(0, 4 - len(display_name))

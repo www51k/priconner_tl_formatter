@@ -14,6 +14,7 @@ from tl_common import (
     TIME_RE,
     TIME_TOKEN_RE,
     character_names_from_formation,
+    display_names_from_tl_declarations,
     normalize_input_line,
     parse_event,
     render_event,
@@ -40,8 +41,18 @@ def split_inline_character_arrow(line: str) -> list[str]:
 def format_text(text: str) -> str:
     output: list[str] = []
     character_names = character_names_from_formation(text)
+    display_names = DISPLAY_NAMES | display_names_from_tl_declarations(text)
+    symbolic_tl = any(
+        re.match(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)", line)
+        for line in text.splitlines()
+    )
+    # TL表記の宣言で追加された短縮名も、キャラ欄の候補として認識する。
+    character_names.update({name: "" for name in display_names})
     normalized_lines = []
     for source_line in text.splitlines():
+        # 投稿由来の区切り記号だけの行は、整形結果には残さない。
+        if re.fullmatch(r"\\+", source_line.strip()):
+            continue
         normalized = normalize_input_line(source_line)
         normalized_lines.extend(split_inline_character_arrow(normalized))
     manual_time_buckets: set[int] = set()
@@ -56,6 +67,7 @@ def format_text(text: str) -> str:
             )
     arrow_chain_active = False
     previous_event_was_star = False
+    previous_event_was_indented = False
     previous_event_seconds: int | None = None
     previous_time_bucket: int | None = None
     for line_no, line in enumerate(normalized_lines, 1):
@@ -86,6 +98,7 @@ def format_text(text: str) -> str:
             output.append(rendered)
             arrow_chain_active = False
             previous_event_was_star = False
+            previous_event_was_indented = False
             previous_event_seconds = None
             continue
         if event.name:
@@ -114,14 +127,18 @@ def format_text(text: str) -> str:
             )
             # 同一秒でも⭐️手動UBは矢印連鎖ではない。YouTube備考欄などで
             # 「直前行と同時刻の手動UB」が頻出するため、明示された⭐️を優先する。
-            if arrow_chain_active and not event.star and (not has_time or same_time):
-                arrow_indent = "　　　" if previous_event_was_star else "　　"
-                event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
-            elif event.arrow:
-                arrow_indent = "　　　" if previous_event_was_star else "　　"
+            if arrow_chain_active and (not has_time and not event.star or same_time):
+                arrow_indent = "　　　" if previous_event_was_star or previous_event_was_indented else "　　"
+                if event.star and same_time:
+                    # 同時刻の⭐️行は手動UB記号を残し、時刻を重複させず
+                    # 矢印連鎖の続きとして表示する。
+                    event = replace(event, prefix=f"⭐️　　→", arrow=True)
+                else:
+                    event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
+            elif event.arrow and not event.star:
+                arrow_indent = "　　　" if previous_event_was_star or previous_event_was_indented else "　　"
                 event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
             arrow_chain_active = True
-            previous_event_was_star = event.star
             if current_seconds is not None:
                 previous_event_seconds = current_seconds
                 previous_time_bucket = current_time_bucket
@@ -132,21 +149,58 @@ def format_text(text: str) -> str:
             rendered = render_event(
                 event,
                 inline_mask,
+                display_names=display_names,
             )
+            if event.star:
+                # ⭐️行のキャラ名以降にある説明は手動操作タイミングの
+                # コメントとして扱う。既存コメントとオート操作は除外する。
+                display_name = display_names.get(event.name, event.name)
+                name_index = rendered.find(display_name)
+                if name_index >= 0:
+                    name_end = name_index + len(display_name)
+                    tail = rendered[name_end:]
+                    tail_content = tail.lstrip(" 	　")
+                    if tail_content and not tail_content.startswith(("//", "''")):
+                        auto_match = re.match(r"🅰️(?:ON|OFF)", tail_content)
+                        if auto_match:
+                            operation = auto_match.group(0)
+                            comment = tail_content[auto_match.end():].lstrip(" 	　")
+                            if comment:
+                                rendered = (
+                                    rendered[:name_end]
+                                    + "　"
+                                    + operation
+                                    + "　''"
+                                    + comment
+                                )
+                        else:
+                            rendered = rendered[:name_end] + "　''" + tail_content
             if (
                 has_time
                 and not event.star
-                and current_time_bucket in manual_time_buckets
-                and not line.startswith("　")
-                and event.name != "ボス"
+                and symbolic_tl
+                and not line.startswith(("　", "△", "🔺"))
             ):
                 rendered = "　" + rendered
+            rendered_has_leading_indent = (
+                line.startswith(("　", "△", "🔺"))
+                or (
+                    has_time
+                    and not event.star
+                    and symbolic_tl
+                    and not line.startswith(("△", "🔺"))
+                )
+            )
+            if not event.arrow:
+                previous_event_was_star = event.star
+                previous_event_was_indented = rendered_has_leading_indent
             output.append(rendered)
             if event.star and event.mask:
                 output.append(f"[{event.mask}]")
         else:
             arrow_chain_active = False
             previous_event_was_star = False
+            previous_event_was_indented = False
             previous_event_seconds = None
             output.append(line.rstrip("\r"))
     return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")

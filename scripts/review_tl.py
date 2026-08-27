@@ -23,6 +23,13 @@ def collect_review_items(
     has_original_set = any(MASK_RE.search(line) for line in original_lines)
     for line_no, line in enumerate(lines, 1):
         event = parse_event(line_no, line, character_names)
+        if event.star and event.name:
+            items.append({
+                "line": line_no,
+                "kind": "UB_REVIEW",
+                "text": line,
+                "reason": "SET・オート状態に関係なく、キャラのUB発動記載を確認します",
+            })
         if event.arrow and event.name is None:
             stripped = line.strip()
             if "ボス" not in stripped and "止めぽ" not in stripped:

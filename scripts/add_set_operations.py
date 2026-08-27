@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from dataclasses import replace
 from pathlib import Path
 
 from tl_common import (
@@ -211,6 +212,9 @@ def add_operations(
     operation_reasons: dict[int, list[str]] = {}
 
     def assign_mask(index: int, mask: str) -> None:
+        previous = previous_event(index)
+        if previous is not None and masks.get(previous) == mask:
+            return
         if events[index].star:
             standalone_after[index] = mask
             masks[index] = None
@@ -308,6 +312,11 @@ def add_operations(
             elif event.mask is not None and ignore_original_set and index != start_mask_index:
                 rendered[index] = MASK_RE.sub("", rendered[index]).strip()
             continue
+
+        # 同時刻の⭐️矢印は表示上の矢印を残すが、SET計算では手動UB。
+        # 矢印として扱うと、手動対象をSET内へ戻すことがある。
+        if event.star and event.arrow:
+            event = replace(event, arrow=False)
 
         active_early_exclusions.update(early_exclusions_by_start.get(index, set()))
         chain = arrow_chain(index)
@@ -477,6 +486,18 @@ def add_operations(
             masks[index] = None
         else:
             masks[index] = changed_mask
+
+    # 同時刻の⭐️矢印は、直前の矢印行で対象キャラをSET外にしておく。
+    # 表示上は⭐️を残すが、手動UBの誤発防止を優先する。
+    for index, event in enumerate(events):
+        if not event.star or not event.arrow:
+            continue
+        previous = previous_event(index)
+        number = character_numbers.get(event.name)
+        if previous is not None and number and masks.get(previous) is not None:
+            previous_state = numbers_from_mask(masks[previous])
+            previous_state.discard(number)
+            masks[previous] = mask_for(previous_state)
 
     # Phase 3: 確定した状態を出力へ反映する。
     # 変更のない行は省略し、絶対マスクとして表示する。
