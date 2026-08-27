@@ -38,6 +38,33 @@ def split_inline_character_arrow(line: str) -> list[str]:
     return [line]
 
 
+def remove_redundant_auto_operations(lines: list[str]) -> list[str]:
+    """同じオート状態の連続操作を除去する。
+
+    SETマスクは変更せず、実際に状態が変わったときだけ🅰️ON/OFFを残す。
+    コメント本文中の🅰️表記は対象外とする。
+    """
+    result: list[str] = []
+    auto_state: str | None = None
+    for line in lines:
+        head, separator, comment = line.partition("//")
+        if not separator:
+            head, separator, comment = line.partition("''")
+        match = re.search(r"🅰️(ON|OFF)", head)
+        if match:
+            state = match.group(1)
+            if state == auto_state:
+                head = head[: match.start()] + head[match.end():]
+                head = re.sub(r"[ \t　]{2,}", "　", head)
+                head = head.rstrip(" \t　")
+                if separator and head:
+                    head += "　"
+            else:
+                auto_state = state
+        result.append(head + (separator + comment if separator else ""))
+    return result
+
+
 def format_text(text: str) -> str:
     output: list[str] = []
     character_names = character_names_from_formation(text)
@@ -203,6 +230,7 @@ def format_text(text: str) -> str:
             previous_event_was_indented = False
             previous_event_seconds = None
             output.append(line.rstrip("\r"))
+    output = remove_redundant_auto_operations(output)
     return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 

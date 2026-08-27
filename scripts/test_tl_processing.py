@@ -420,6 +420,15 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertTrue(result.startswith("[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n\n[-----]🅰️OFF"))
 
+    def test_redundant_auto_off_is_removed_but_set_is_kept(self) -> None:
+        result = format_text(
+            "[✕〇✕✕✕]off\n"
+            "1:18　アオイ　[✕〇✕✕✕]off\n"
+            "1:12　ネラ　[〇〇✕✕✕]off\n"
+        )
+        self.assertEqual(result.count("🅰️OFF"), 1)
+        self.assertIn("1:12　ネラ　[54---]", result)
+
     def test_formation_header_maps_unregistered_characters(self) -> None:
         text = (
             "[(5)ユニ|(4)スミレ|(3)グレイス|(2)ルルィ|(1)シオリ]\n"
