@@ -120,10 +120,6 @@ def normalize_input_line(line: str) -> str:
     bold_auto = r"\*\*((?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ))\*\*"
     auto_head = re.sub(bold_auto, r"\1", auto_head, flags=re.IGNORECASE)
     auto_tail = re.sub(bold_auto, r"\1", auto_tail, flags=re.IGNORECASE)
-    # 引用符で単独指定された「オート」は操作ONを意味する。
-    # 文章中の「オート」は対象にしない。
-    auto_head = re.sub(r'''["「『](?:オート|AUTO)["」』]''', "🅰️ON", auto_head, flags=re.IGNORECASE)
-    auto_tail = re.sub(r'''["「『](?:オート|AUTO)["」』]''', "🅰️ON", auto_tail, flags=re.IGNORECASE)
     auto_head = re.sub(
         r'''["「『]?(?:オート|AUTO)[ \t　]*(ON|OFF|オン|オフ)["」』]?''',
         lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",

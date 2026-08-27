@@ -115,10 +115,10 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("]on", formatted)
         self.assertNotIn("]off", formatted)
 
-    def test_quoted_bare_auto_means_auto_on(self) -> None:
+    def test_quoted_bare_auto_is_a_ub_condition_note(self) -> None:
         formatted = format_text('0:27　波レ　"オート"\n⇒猫　"オート"\n')
-        self.assertIn("0:27　波レ　　　🅰️ON", formatted)
-        self.assertIn("→　猫　　　　🅰️ON", formatted)
+        self.assertIn('0:27　波レ　　　"オート"', formatted)
+        self.assertIn('→　猫　　　　"オート"', formatted)
 
     def test_single_quote_between_set_and_auto_is_removed(self) -> None:
         self.assertEqual(
