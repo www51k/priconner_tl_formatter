@@ -94,6 +94,18 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("🅰️ON", formatted)
         self.assertIn("// 1:04-03 【保持】", formatted)
 
+    def test_bare_auto_state_after_mask_is_normalized(self) -> None:
+        text = (
+            "[(5)サレン|(4)アネモネ|(3)プレシア|(2)リリア|(1)クリア]\n"
+            "1:20　クリア　ピアースcl早め　[〇〇✕〇✕]on\n"
+            "1:18　プレシア（オート）　[✕〇✕✕✕]off\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("[54-2-]🅰️ON　ピアースcl早め", formatted)
+        self.assertIn("[-4---]🅰️OFF　（オート）", formatted)
+        self.assertNotIn("]on", formatted)
+        self.assertNotIn("]off", formatted)
+
     def test_formation_symbols_convert_to_fixed_mask(self) -> None:
         text = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
         text += "0:10　アオイ　OXOXO\n0:09　アオイ　O-O-O\n"

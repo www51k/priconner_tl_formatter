@@ -68,6 +68,14 @@ def normalize_input_line(line: str) -> str:
         head,
         flags=re.IGNORECASE,
     )
+    # YouTube備考欄・Discord投稿では、SETマスクの後ろに裸の on/off が
+    # 付くことがある。コメント本文ではなく構造部だけを対象にする。
+    head = re.sub(
+        r"(?<!🅰️)(?<![A-Za-z])(ON|OFF|オン|オフ)(?![A-Za-z])",
+        lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",
+        head,
+        flags=re.IGNORECASE,
+    )
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"[\"“”「」『』]\s*(🅰️(?:ON|OFF))\s*[\"“”「」『』]", r"\1", head)
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
@@ -229,12 +237,19 @@ def render_event(
     rest = MASK_RE.sub("", rest)
     rest = rest.strip(" \t　")
 
-    parts: list[str] = []
+    auto_match = re.search(r"🅰️(?:ON|OFF)", rest)
+    auto = auto_match.group(0) if auto_match else None
+    if auto:
+        rest = (rest[:auto_match.start()] + rest[auto_match.end():]).strip(" \t　")
+
+    prefix_parts: list[str] = []
     if mask is not None:
-        parts.append(mask)
+        prefix_parts.append(mask)
+    if auto:
+        prefix_parts.append(auto)
+    suffix = "".join(prefix_parts)
     if rest:
-        parts.append(rest)
-    suffix = "　".join(parts)
+        suffix += ("　" if suffix else "") + rest
     if not suffix:
         return prefix + display_name
     return prefix + name_field + "　" + suffix
