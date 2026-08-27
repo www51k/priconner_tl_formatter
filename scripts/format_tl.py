@@ -138,6 +138,7 @@ def format_text(text: str) -> str:
                 and not event.star
                 and current_time_bucket in manual_time_buckets
                 and not line.startswith("　")
+                and event.name != "ボス"
             ):
                 rendered = "　" + rendered
             output.append(rendered)

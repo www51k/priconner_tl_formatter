@@ -34,6 +34,36 @@ def normalize_input_line(line: str) -> str:
         head, comment = source[:comment_start], source[comment_start:]
     else:
         head, comment = source, ""
+    # 敵UB見出しは、枠記号を外して通常のボス行へ変換する。
+    boss_header = re.match(
+        r"^\\?===【\s*(\d{1,2}:\d{1,2})\s*(?:敵UB|ボスUB|敵|ボス)\s*】===$",
+        head,
+        flags=re.IGNORECASE,
+    )
+    if boss_header:
+        head = f"{boss_header.group(1)}　ボス"
+    # 見出し（例: ===【0:33 敵UB】===）はイベント行ではないため、
+    # 早期returnの前にボス表記だけを統一する。
+    head = re.sub(r"(?:敵|ボス)UB", "ボス", head, flags=re.IGNORECASE)
+    head = re.sub(r"敵", "ボス", head)
+    # 時刻の前後を装飾線で囲んだボス行も、装飾を外して通常行にする。
+    decorated_boss = re.match(
+        r"^[\\\-_=~]+(\d{1,2}:\d{1,2})\s*ボス[\\\-_=~]*(.*)$",
+        head,
+        flags=re.IGNORECASE,
+    )
+    if decorated_boss:
+        head = f"{decorated_boss.group(1)}　ボス{decorated_boss.group(2)}"
+    else:
+        # ボス名が一覧にない場合でも、装飾線で囲まれた時刻＋ダメージ
+        # 表記はボス行として扱う（例: バイオドーザー ---[4.06億]）。
+        decorated_boss_record = re.match(
+            r"^[\\\-_=~]+(\d{1,2}:\d{1,2})\s+.+?\s+[\\\-_=~]+\s*(\[[^\n\]]+\])\s*$",
+            head,
+            flags=re.IGNORECASE,
+        )
+        if decorated_boss_record:
+            head = f"{decorated_boss_record.group(1)}　ボス　{decorated_boss_record.group(2)}"
     # 丸・ばつの絵文字は先に1文字へ寄せてから5文字マスクを判定する。
     head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("❌", "X")
@@ -51,8 +81,12 @@ def normalize_input_line(line: str) -> str:
     ):
         # 時刻のない発動行も、数値SETマスクがあれば構造行として扱う。
         if MASK_RE.search(head) is None:
-            return source
+            return head + comment
     head = head.replace("【", "[").replace("】", "]")
+    # ボス表記の揺れは、構造部に限って「ボス」へ統一する。コメント内
+    # の文章は変更しない。
+    head = re.sub(r"(?:敵|ボス)UB", "ボス", head, flags=re.IGNORECASE)
+    head = re.sub(r"敵", "ボス", head)
     # 投稿で使われる省略表記を、SETマスクとして採用する。コメントは
     # 上で切り離しているため、備考中の同じ語は変更しない。
     head = re.sub(r"全解除", "[-----]", head)
@@ -266,7 +300,7 @@ def parse_event(
             prefix = line[: line.find(name)]
 
     # 開始行・ボス行はキャラクター発動ではない。
-    if name in {"開始時", "開始", "バトル開始", "ボス", "止めぽ"}:
+    if name in {"開始時", "開始", "バトル開始", "止めぽ"}:
         name = None
 
     return Event(line_no, line, prefix, name, star, arrow, mask)

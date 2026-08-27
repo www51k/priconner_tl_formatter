@@ -206,6 +206,39 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("アメス　　(1000)", formatted)
         self.assertIn("マホ　　　1000", formatted)
 
+    def test_boss_lines_are_fixed_width_and_enemy_labels_are_normalized(self) -> None:
+        formatted = format_text(
+            "1:12　敵　コメント\n"
+            "⭐️1:12　敵UB　コメント\n"
+        )
+        self.assertEqual(
+            formatted,
+            "1:12　ボス　　　コメント\n⭐️1:12　ボス　　　コメント\n",
+        )
+
+    def test_enemy_labels_inside_comments_are_preserved(self) -> None:
+        formatted = format_text("1:12　アオイ　''敵 敵UB\n1:11　アオイ　// 敵 敵UB\n")
+        self.assertIn("''敵 敵UB", formatted)
+        self.assertIn("// 敵 敵UB", formatted)
+
+    def test_decorated_boss_lines_become_normal_boss_events(self) -> None:
+        self.assertEqual(
+            format_text("\\----0:52 ボスUB----\n\\--0:11 敵UB　　アオイset\n"),
+            "0:52　ボス\n\n0:11　ボス　　　アオイset\n",
+        )
+
+    def test_decorated_named_boss_damage_record_becomes_boss(self) -> None:
+        self.assertEqual(
+            format_text("\\---00:33 バイオドーザー　---[4.06億]\n"),
+            "0:33　ボス　　　[4.06億]\n",
+        )
+
+    def test_enemy_ub_in_battle_header_becomes_boss(self) -> None:
+        self.assertEqual(
+            format_text("\\===【0:33　敵UB】===\n"),
+            "0:33　ボス\n",
+        )
+
     def test_learning_style_names_work_without_formation_header(self) -> None:
         formatted = format_text(
             "1:30　クローチェ　〇〇〇〇〇\n"
