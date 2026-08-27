@@ -23,6 +23,53 @@ from tl_common import (
 )
 
 
+def ensure_initial_operation(text: str, initial: str = "-----") -> str:
+    """既存SETを保持したまま、先頭の初期SETだけを補う。
+
+    SET付き原本は再計算しない方針だが、編成ヘッダーや本文後半にだけ
+    SETがある入力では、初期状態の行まで欠落させない。
+    """
+    lines = text.splitlines()
+    if not lines:
+        return text
+
+    header_index = next(
+        (index for index, line in enumerate(lines)
+         if line.startswith("[(") and "|" in line),
+        -1,
+    )
+    first_event_index = next(
+        (
+            index for index, line in enumerate(lines)
+            if TIME_TOKEN_RE.search(line)
+            or re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒)", line)
+        ),
+        len(lines),
+    )
+
+    # 編成ヘッダー直後の単独SET、または先頭の独立SETは既存の初期SET。
+    search_start = header_index + 1 if header_index >= 0 else 0
+    for line in lines[search_start:first_event_index]:
+        if re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", line):
+            return text
+
+    # 時刻付きの「バトル開始 [.....]」や、ヘッダーなしの先頭SETは原本を維持。
+    first_nonempty = next((index for index, line in enumerate(lines) if line.strip()), None)
+    if header_index < 0 and first_nonempty is not None:
+        first_line = lines[first_nonempty]
+        if MASK_RE.search(first_line) and (
+            first_line.lstrip().startswith("[") or "バトル開始" in first_line
+        ):
+            return text
+
+    insertion = ["", f"[{initial}]🅰️OFF", ""] if header_index >= 0 else [f"[{initial}]🅰️OFF", ""]
+    if header_index >= 0:
+        lines[header_index + 1:header_index + 1] = insertion
+    else:
+        lines[0:0] = insertion
+    return "\n".join(lines)
+
+
 def add_operations(
     text: str,
     initial: str = "-----",
@@ -34,7 +81,7 @@ def add_operations(
     # 再計算すると同じマスクの重複や、手動UB直後の意図しない変更が
     # 混入するため、再計算は明示的な --ignore-original-set の場合だけ行う。
     if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
-        return text
+        return ensure_initial_operation(text, initial)
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     character_numbers = dict(CHAR_NUMBERS)

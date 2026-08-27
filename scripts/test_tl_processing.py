@@ -382,6 +382,21 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertTrue(result.startswith("[(5)ユキノ|(4)ティア|(3)ミソラ|(2)ソノ|(1)イサナミ]\n\n[-----]🅰️OFF"))
 
+    def test_formation_header_gets_initial_set_when_later_set_exists(self) -> None:
+        text = (
+            "[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n"
+            "⭐️1:17　猫　[--32-]\n"
+            "1:06　尻　[54--1]\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertTrue(
+            result.startswith(
+                "[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n"
+                "\n[-----]🅰️OFF\n\n"
+            )
+        )
+        self.assertIn("[--32-]", result)
+
     def test_formation_header_maps_unregistered_characters(self) -> None:
         text = (
             "[(5)ユニ|(4)スミレ|(3)グレイス|(2)ルルィ|(1)シオリ]\n"
