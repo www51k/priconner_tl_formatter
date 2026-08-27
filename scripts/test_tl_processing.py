@@ -154,7 +154,13 @@ class TlProcessingTests(unittest.TestCase):
         text = "1:21　モネ　　　[543-1]\n　　　→　アカリ　　[54--1]\n"
         self.assertEqual(
             format_text(text),
-            "1:21　モネ　　　[543-1]\n　　　→　アカリ　　[54--1]\n",
+            "1:21　モネ　　　[543-1]\n　　→　アカリ　　[54--1]\n",
+        )
+
+    def test_star_following_arrow_keeps_three_space_indent(self) -> None:
+        self.assertEqual(
+            format_text("⭐️1:20　クリア\n　　　→　レイ\n"),
+            "⭐️1:20　クリア\n　　　→　レイ\n",
         )
 
     def test_non_star_time_is_indented_when_same_bucket_has_manual_ub(self) -> None:
@@ -169,7 +175,7 @@ class TlProcessingTests(unittest.TestCase):
     def test_inline_character_arrow_becomes_following_arrow_line(self) -> None:
         self.assertEqual(
             format_text("0:47 シナツ→クリア\n"),
-            "0:47　シナツ\n　　　→　クリア\n",
+            "0:47　シナツ\n　　→　クリア\n",
         )
 
     def test_auto_after_inline_arrow_is_not_assigned_to_previous_character(self) -> None:
@@ -326,7 +332,7 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("🅰️OFF", formatted)
 
     def test_arrow_variants_are_normalized(self) -> None:
-        self.assertEqual(format_text("⇒ユニ\n"), "　　　→　ユニ\n")
+        self.assertEqual(format_text("⇒ユニ\n"), "　　→　ユニ\n")
 
     def test_same_second_manual_ub_is_not_converted_to_arrow(self) -> None:
         text = (

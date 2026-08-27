@@ -55,6 +55,7 @@ def format_text(text: str) -> str:
                 (int(time_match.group(1)) * 60 + int(time_match.group(2))) // 10
             )
     arrow_chain_active = False
+    previous_event_was_star = False
     previous_event_seconds: int | None = None
     previous_time_bucket: int | None = None
     for line_no, line in enumerate(normalized_lines, 1):
@@ -84,6 +85,7 @@ def format_text(text: str) -> str:
                 rendered += separator + comment
             output.append(rendered)
             arrow_chain_active = False
+            previous_event_was_star = False
             previous_event_seconds = None
             continue
         if event.name:
@@ -113,8 +115,13 @@ def format_text(text: str) -> str:
             # 同一秒でも⭐️手動UBは矢印連鎖ではない。YouTube備考欄などで
             # 「直前行と同時刻の手動UB」が頻出するため、明示された⭐️を優先する。
             if arrow_chain_active and not event.star and (not has_time or same_time):
-                event = replace(event, prefix="　　　→", arrow=True)
+                arrow_indent = "　　　" if previous_event_was_star else "　　"
+                event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
+            elif event.arrow:
+                arrow_indent = "　　　" if previous_event_was_star else "　　"
+                event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
             arrow_chain_active = True
+            previous_event_was_star = event.star
             if current_seconds is not None:
                 previous_event_seconds = current_seconds
                 previous_time_bucket = current_time_bucket
@@ -138,6 +145,7 @@ def format_text(text: str) -> str:
                 output.append(f"[{event.mask}]")
         else:
             arrow_chain_active = False
+            previous_event_was_star = False
             previous_event_seconds = None
             output.append(line.rstrip("\r"))
     return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
