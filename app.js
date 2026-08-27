@@ -49,6 +49,17 @@ formationList.addEventListener("input", () => {
 
 function pickCharacters(source) {
   const excluded = new Set(["開始時", "開始", "バトル開始", "ボス", "ボスUB", "敵", "敵UB", "止めぽ", "AUTO", "オート"]);
+  const declarations = [];
+  const sourceLines = source.split("\n");
+  for (let index = 0; index < sourceLines.length - 1; index += 1) {
+    const formal = sourceLines[index].trim();
+    if (!formal || /[ \t　]/.test(formal) || /^(?:\\+|ーー|--|\/\/|TL表記)/.test(formal)) continue;
+    let nextIndex = index + 1;
+    while (nextIndex < sourceLines.length && /^(?:\s*|\\+)$/.test(sourceLines[nextIndex])) nextIndex += 1;
+    const tlMatch = sourceLines[nextIndex]?.trim().match(/^TL表記は\s*(\S+)$/);
+    if (tlMatch) declarations.push({ formal, tl: tlMatch[1] });
+  }
+  if (declarations.length === 5) return declarations.map(({ formal }) => formal).reverse();
   const names = [];
   for (const rawLine of source.split("\n")) {
     const candidateLine = rawLine.trimStart();
@@ -139,7 +150,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260827-formatter-2`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260827-formatter-5`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -178,16 +189,9 @@ async function formatTL() {
 import json
 formatted = format_text(source_text)
 report = []
-has_original_set = any(MASK_RE.search(line) for line in formatted.splitlines())
-if has_original_set:
-    # SET付き原本は学習済みの操作指定を含むため、再計算せず書式だけ保持する。
-    set_text = formatted
-    errors = []
-    review_items = []
-else:
-    set_text = formatted
-    errors = []
-    review_items = []
+set_text = add_operations(formatted, report=report)
+errors = validate(set_text)
+review_items = collect_review_items(set_text, formatted)
 error_details = []
 for error in errors:
     line_number = int(error.split(":", 1)[0])
