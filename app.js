@@ -58,7 +58,7 @@ function pickCharacters(source) {
     // 使用キャラ説明やコメント中の単語ではなく、時間行・矢印行だけから拾う。
     if (!isTimedLine && !isArrowLine) continue;
     const line = rawLine.split("//", 1)[0]
-      .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*/, "")
+      .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*/, "")
       .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
       .replace(/^(?:→|➡︎|⇨|⇒|->|>)\s*/, "");
     if (!line || line.startsWith("[") || line.startsWith("【")) continue;
