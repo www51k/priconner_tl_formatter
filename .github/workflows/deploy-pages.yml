@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p site-dist/scripts
           cp index.html app.css app.js site-dist/
-          cp scripts/tl_common.py scripts/format_tl.py scripts/add_set_operations.py \
+          cp scripts/character_aliases.py scripts/tl_common.py scripts/format_tl.py scripts/add_set_operations.py \
             scripts/validate_tl.py scripts/review_tl.py site-dist/scripts/
 
       - name: Upload site
