@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from tl_common import CHAR_NUMBERS, MASK_RE, parse_event
+from tl_common import CHAR_NUMBERS, MASK_RE, character_names_from_formation, parse_event
 from validate_tl import validate
 
 
@@ -19,9 +19,10 @@ def collect_review_items(
     items: list[dict[str, object]] = []
     lines = text.splitlines()
     original_lines = original_text.splitlines() if original_text is not None else []
+    character_names = character_names_from_formation(text)
     has_original_set = any(MASK_RE.search(line) for line in original_lines)
     for line_no, line in enumerate(lines, 1):
-        event = parse_event(line_no, line)
+        event = parse_event(line_no, line, character_names)
         if event.arrow and event.name is None:
             stripped = line.strip()
             if "ボス" not in stripped and "止めぽ" not in stripped:
@@ -32,7 +33,7 @@ def collect_review_items(
                     "reason": "発動行のキャラ名を機械解析できません",
                 })
         original_line = original_lines[line_no - 1] if line_no <= len(original_lines) else ""
-        original_event = parse_event(line_no, original_line)
+        original_event = parse_event(line_no, original_line, character_names)
         original_auto_on = (
             "🅰️ON" in original_line
             or re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|オン)", original_line, re.IGNORECASE)

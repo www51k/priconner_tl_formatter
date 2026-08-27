@@ -33,6 +33,15 @@ class TlProcessingTests(unittest.TestCase):
         reference_output.exists(),
         "ローカルTL fixtureがある場合だけ実行する",
     )
+    def test_ideal_output_is_stable_when_formatted_again(self) -> None:
+        source = self.reference_output.read_text(encoding="utf-8")
+        self.assertEqual(format_text(source), source)
+        self.assertEqual(add_operations(source), source)
+
+    @unittest.skipUnless(
+        reference_output.exists(),
+        "ローカルTL fixtureがある場合だけ実行する",
+    )
     def test_reference_tl_passes_validation(self) -> None:
         text = self.reference_output.read_text(encoding="utf-8")
         self.assertEqual(validate(text), [])
@@ -184,6 +193,63 @@ class TlProcessingTests(unittest.TestCase):
         self.assertEqual(format_text('【〇〇－－－】 "オートオフ"\n'), '[54---]🅰️OFF\n')
         self.assertEqual(format_text('[5-321]　“🅰️OFF”\n'), '[5-321]🅰️OFF\n')
         self.assertEqual(format_text('[5-321]　🅰️OFF\n'), '[5-321]🅰️OFF\n')
+
+    def test_formation_header_resolves_long_names_and_fullwidth_notes(self) -> None:
+        text = (
+            "[(5)ヴァイオレット|(4)ネフィ＝ネラ|(3)クルル|(2)ニュリノ|(1)水マホ]\n"
+            "1:10　クルル（オート）　ニュリノSET\n"
+            "　　⇒ニュリノ　クルル・ニュリノ解除　オートoff\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("1:10　クルル", formatted)
+        self.assertIn("→　ニュリノ", formatted)
+        self.assertIn("🅰️OFF", formatted)
+
+    def test_arrow_variants_are_normalized(self) -> None:
+        self.assertEqual(format_text("⇒ユニ\n"), "　　　→　ユニ\n")
+
+    def test_same_second_manual_ub_is_not_converted_to_arrow(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:57　ペコ\n"
+            "⭐️0:57-56　シェフィ　''汐沓cl最速\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("⭐️0:57-56　シェフィ", formatted)
+        self.assertNotIn("→　シェフィ", formatted)
+
+    def test_inserts_one_blank_line_at_ten_second_boundaries(self) -> None:
+        text = "0:21　アオイ\n0:20　ペコ\n0:19　ツムギ\n0:10　ネラ\n0:09　シェフィ\n"
+        formatted = format_text(text)
+        self.assertEqual(
+            formatted,
+            "0:21　アオイ\n0:20　ペコ\n\n0:19　ツムギ\n0:10　ネラ\n\n"
+            "0:09　シェフィ\n",
+        )
+
+    def test_preserves_mask_content_but_moves_manual_mask_to_next_line(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "⭐️0:20　アオイ　[5-3--]\n"
+            "0:19　ツムギ　[5-3--]\n"
+        )
+        self.assertEqual(
+            format_text(text),
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "⭐️0:20　アオイ\n[5-3--]\n"
+            "\n0:19　ツムギ　　[5-3--]\n",
+        )
+
+    def test_spreadsheet_formal_names_render_as_abbreviations(self) -> None:
+        text = "[(5)ペコリーヌ|(4)ラビリスタ|(3)ヴァイオレット|(2)ハツネ＆シオリ|(1)ミソギ＆ミミ＆キョウカ]\n"
+        text += "0:10　ペコリーヌ\n0:09　ラビリスタ\n0:08　ヴァイオレット\n"
+        text += "0:07　ハツネ＆シオリ\n0:06　ミソギ＆ミミ＆キョウカ\n"
+        formatted = format_text(text)
+        self.assertIn("0:10　ペコ\n", formatted)
+        self.assertIn("0:09　ラビ\n", formatted)
+        self.assertIn("0:08　すみれ", formatted)
+        self.assertIn("0:07　ハツシオ", formatted)
+        self.assertIn("0:06　リトリリ", formatted)
 
 
 if __name__ == "__main__":

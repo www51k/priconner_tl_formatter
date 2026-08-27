@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TL整形精度比較</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #f5f7fb; color: #172033; }
+    header { padding: 20px 24px 12px; background: #172033; color: white; }
+    h1 { margin: 0 0 6px; font-size: 1.35rem; }
+    header p { margin: 0; color: #cbd5e1; font-size: .9rem; }
+    main { padding: 18px 24px 28px; }
+    .controls { display: none; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; margin-bottom: 14px; }
+    label { display: grid; gap: 6px; font-weight: 700; font-size: .9rem; }
+    input, select, button { font: inherit; }
+    input[type=file], select { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #b8c2d1; border-radius: 6px; background: white; color: #172033; }
+    button { border: 0; border-radius: 6px; padding: 9px 14px; background: #2563eb; color: white; cursor: pointer; font-weight: 700; }
+    button.secondary { background: #64748b; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .toolbar { display: flex; justify-content: flex-end; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .toolbar button, .toolbar label { display: none; }
+    .toolbar label { display: flex; align-items: center; gap: 6px; font-weight: 400; }
+    #summary { min-height: 1.4em; color: #334155; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel { min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: white; }
+    .panel h2 { margin: 0; padding: 10px 12px; font-size: 1rem; background: #e2e8f0; }
+    .code { overflow: auto; max-height: calc(100vh - 245px); }
+    table { border-collapse: collapse; width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.5; }
+    td { vertical-align: top; white-space: pre; }
+    td.number { width: 3.6em; padding: 2px 8px; text-align: right; color: #64748b; background: #f1f5f9; user-select: none; }
+    td.text { padding: 2px 10px; }
+    tr.changed td.text { background: #fff1c2; }
+    tr.only-left td.text { background: #fee2e2; }
+    tr.only-right td.text { background: #dcfce7; }
+    .empty { padding: 32px; color: #64748b; text-align: center; }
+    @media (max-width: 850px) { .controls, .compare { grid-template-columns: 1fr; } .code { max-height: 45vh; } }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f172a; color: #e2e8f0; }
+      input[type=file], select, .panel { background: #111827; color: #e2e8f0; border-color: #475569; }
+      .panel h2, td.number { background: #1e293b; }
+      #summary { color: #cbd5e1; }
+      tr.changed td.text { background: #604b11; }
+      tr.only-left td.text { background: #5f2525; }
+      tr.only-right td.text { background: #164e2b; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>TL整形精度比較</h1>
+    <p>原本を左、整形後を右に表示します。ファイルはブラウザ内だけで読み込み、保存・送信しません。</p>
+  </header>
+  <main>
+    <section class="controls" aria-label="比較ファイル選択">
+      <label>原本（YouTube備考欄・Discord投稿など）
+        <input id="original-files" type="file" multiple accept=".txt,.org,.md,text/plain">
+      </label>
+      <label>整形後
+        <input id="formatted-files" type="file" multiple accept=".txt,.org,.md,text/plain">
+      </label>
+      <label>比較するファイル
+        <select id="pair" disabled><option>ファイルを選択してください</option></select>
+      </label>
+    </section>
+    <div class="toolbar">
+      <button id="compare" disabled>比較する</button>
+      <button id="clear" class="secondary" type="button">クリア</button>
+      <label><input id="wrap" type="checkbox"> 長い行を折り返す</label>
+      <span id="summary" role="status"></span>
+    </div>
+    <section class="compare">
+      <article class="panel">
+        <h2 id="original-title">原本</h2>
+        <div id="original-view" class="code"><div class="empty">原本ファイルを選択してください</div></div>
+      </article>
+      <article class="panel">
+        <h2 id="formatted-title">整形後</h2>
+        <div id="formatted-view" class="code"><div class="empty">整形後ファイルを選択してください</div></div>
+      </article>
+    </section>
+  </main>
+  <script>
+    const originalInput = document.querySelector("#original-files");
+    const formattedInput = document.querySelector("#formatted-files");
+    const pairSelect = document.querySelector("#pair");
+    const compareButton = document.querySelector("#compare");
+    const summary = document.querySelector("#summary");
+    const originalView = document.querySelector("#original-view");
+    const formattedView = document.querySelector("#formatted-view");
+    const files = { original: new Map(), formatted: new Map() };
+    const defaultPairs = new Map();
+
+    function key(name) {
+      return name.replace(/\.(?:org|txt|md)$/i, "");
+    }
+
+    function read(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).replace(/^\uFEFF/, ""));
+        reader.onerror = () => reject(reader.error || new Error("ファイルを読み込めません"));
+        reader.readAsText(file, "UTF-8");
+      });
+    }
+
+    function refreshPairs() {
+      const names = [...new Set([...files.original.keys(), ...files.formatted.keys()])].sort();
+      pairSelect.replaceChildren();
+      for (const name of names) {
+        const option = new Option(name, name);
+        const hasOriginal = files.original.has(name);
+        const hasFormatted = files.formatted.has(name);
+        option.textContent = `${name}${hasOriginal && hasFormatted ? "" : hasOriginal ? "（整形後なし）" : "（原本なし）"}`;
+        pairSelect.append(option);
+      }
+      pairSelect.disabled = names.length === 0;
+      compareButton.disabled = names.length === 0;
+    }
+
+    function loadFiles(kind, fileList) {
+      files[kind].clear();
+      for (const file of fileList) files[kind].set(key(file.name), file);
+      refreshPairs();
+    }
+
+    function lineTable(container, text, otherLines, side) {
+      const lines = text === "" ? [""] : text.split(/\r?\n/);
+      const table = document.createElement("table");
+      const body = document.createElement("tbody");
+      lines.forEach((line, index) => {
+        const row = document.createElement("tr");
+        const other = otherLines[index];
+        if (other === undefined) row.className = side === "left" ? "only-left" : "only-right";
+        else if (line !== other) row.className = "changed";
+        const number = document.createElement("td");
+        number.className = "number";
+        number.textContent = String(index + 1);
+        const value = document.createElement("td");
+        value.className = "text";
+        value.textContent = line;
+        row.append(number, value);
+        body.append(row);
+      });
+      table.append(body);
+      container.replaceChildren(table);
+    }
+
+    function renderComparison(name, original, formatted, originalTitle = name + ".org", formattedTitle = name + ".txt") {
+      const originalLines = original.split(/\r?\n/);
+      const formattedLines = formatted.split(/\r?\n/);
+      let changed = 0;
+      const max = Math.max(originalLines.length, formattedLines.length);
+      for (let i = 0; i < max; i++) if (originalLines[i] !== formattedLines[i]) changed++;
+      lineTable(originalView, original, formattedLines, "left");
+      lineTable(formattedView, formatted, originalLines, "right");
+      document.querySelector("#original-title").textContent = `原本：${originalTitle}`;
+      document.querySelector("#formatted-title").textContent = `整形後：${formattedTitle}`;
+      summary.textContent = `全${max}行 / 同一 ${max - changed}行 / 差分 ${changed}行`;
+    }
+
+    async function compare() {
+      const name = pairSelect.value;
+      const originalFile = files.original.get(name);
+      const formattedFile = files.formatted.get(name);
+      if (!originalFile || !formattedFile) {
+        const defaultPair = defaultPairs.get(name);
+        if (defaultPair) {
+          renderComparison(name, defaultPair.original, defaultPair.formatted, defaultPair.originalTitle, defaultPair.formattedTitle);
+          return;
+        }
+        summary.textContent = "原本と整形後の同名ファイルを両方選択してください。";
+        return;
+      }
+      try {
+        const [original, formatted] = await Promise.all([read(originalFile), read(formattedFile)]);
+        renderComparison(name, original, formatted, originalFile.name, formattedFile.name);
+      } catch (error) {
+        summary.textContent = `読み込み失敗：${error.message}`;
+      }
+    }
+
+    originalInput.addEventListener("change", () => loadFiles("original", originalInput.files));
+    formattedInput.addEventListener("change", () => loadFiles("formatted", formattedInput.files));
+    compareButton.addEventListener("click", compare);
+    pairSelect.addEventListener("change", compare);
+    document.querySelector("#clear").addEventListener("click", () => {
+      files.original.clear(); files.formatted.clear();
+      originalInput.value = ""; formattedInput.value = "";
+      pairSelect.replaceChildren(new Option("ファイルを選択してください"));
+      pairSelect.disabled = true; compareButton.disabled = true;
+      originalView.innerHTML = '<div class="empty">原本ファイルを選択してください</div>';
+      formattedView.innerHTML = '<div class="empty">整形後ファイルを選択してください</div>';
+      summary.textContent = "";
+    });
+    document.querySelector("#wrap").addEventListener("change", (event) => {
+      document.querySelectorAll("td.text").forEach((cell) => {
+        cell.style.whiteSpace = event.target.checked ? "pre-wrap" : "pre";
+        cell.style.overflowWrap = event.target.checked ? "anywhere" : "normal";
+      });
+    });
+
+    let syncingScroll = false;
+    function syncScroll(source, target) {
+      if (syncingScroll) return;
+      const sourceRange = source.scrollHeight - source.clientHeight;
+      const targetRange = target.scrollHeight - target.clientHeight;
+      const progress = sourceRange > 0 ? source.scrollTop / sourceRange : 0;
+      syncingScroll = true;
+      target.scrollTop = progress * Math.max(0, targetRange);
+      target.scrollLeft = source.scrollLeft;
+      requestAnimationFrame(() => { syncingScroll = false; });
+    }
+    originalView.addEventListener("scroll", () => syncScroll(originalView, formattedView));
+    formattedView.addEventListener("scroll", () => syncScroll(formattedView, originalView));
+
+    async function showDefaultPair() {
+      try {
+        const pairs = [
+          ["202608_3m54200_5", "202608_3m54200_5.org", "202608_3m54200_5.txt"],
+        ];
+        const loaded = await Promise.all(pairs.map(async ([name, originalPath, formattedPath]) => {
+          const [originalResponse, formattedResponse] = await Promise.all([
+            fetch(originalPath), fetch(formattedPath),
+          ]);
+          if (!originalResponse.ok || !formattedResponse.ok) return null;
+          return {
+            name,
+            original: await originalResponse.text(),
+            formatted: await formattedResponse.text(),
+            originalTitle: originalPath,
+            formattedTitle: formattedPath,
+          };
+        }));
+        const available = loaded.filter(Boolean);
+        if (!available.length) return;
+        for (const pair of available) defaultPairs.set(pair.name, pair);
+        pairSelect.replaceChildren(...available.map((pair) => new Option(pair.name, pair.name)));
+        pairSelect.value = available[0].name;
+        pairSelect.disabled = false;
+        compareButton.disabled = false;
+        await compare();
+      } catch (_) {
+        // file:// 直開きなどで自動読込できない場合は、ファイル選択を使う。
+      }
+    }
+    showDefaultPair();
+  </script>
+</body>
+</html>

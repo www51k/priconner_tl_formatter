@@ -1,5 +1,5 @@
 const PYODIDE_VERSION = "0.27.2";
-const SCRIPT_NAMES = ["tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py"];
+const SCRIPT_NAMES = ["character_aliases.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py"];
 
 const input = document.querySelector("#input");
 const output = document.querySelector("#output");
@@ -54,10 +54,10 @@ function pickCharacters(source) {
     const line = rawLine.split("//", 1)[0]
       .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*/, "")
       .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
-      .replace(/^→\s*/, "");
+      .replace(/^(?:→|➡︎|⇨|⇒|->|>)\s*/, "");
     if (!line || line.startsWith("[") || line.startsWith("【")) continue;
     if (/^(?:タゲ|ターゲット)/.test(line) || /^(?:[ABC]\s*\/\s*)+[ABC]$/.test(line)) continue;
-    const match = line.match(/^([^\s　\[\]【】「"']+)(?=[\s　\[【「"']|$)/);
+    const match = line.match(/^([^\s　\[\]【】「"'()（）]+)(?=[\s　\[【「"'()（）]|$)/);
     const name = match?.[1];
     if (
       name
@@ -173,9 +173,10 @@ formatted = format_text(source_text)
 report = []
 has_original_set = any(MASK_RE.search(line) for line in formatted.splitlines())
 if has_original_set:
-    set_text = add_operations(formatted, report=report)
+    # SET付き原本は学習済みの操作指定を含むため、再計算せず書式だけ保持する。
+    set_text = formatted
     errors = []
-    review_items = collect_review_items(set_text, formatted)
+    review_items = []
 else:
     set_text = formatted
     errors = []

@@ -16,6 +16,7 @@ from tl_common import (
     mask_for,
     numbers_from_mask,
     parse_event,
+    character_names_from_formation,
     render_event,
     MASK_RE,
 )
@@ -28,8 +29,15 @@ def add_operations(
     ignore_original_set: bool = False,
 ) -> str:
     lines = text.splitlines()
-    events = [parse_event(line_no, line) for line_no, line in enumerate(lines, 1)]
+    # SET付き原本は投稿者の指定を学習済みの正解として扱う。
+    # 再計算すると同じマスクの重複や、手動UB直後の意図しない変更が
+    # 混入するため、再計算は明示的な --ignore-original-set の場合だけ行う。
+    if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
+        return text
+    character_names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     character_numbers = dict(CHAR_NUMBERS)
+    character_numbers.update(character_names)
     for line in lines:
         for match in re.finditer(r"\(([54321])\)([^|)\]]+)", line):
             character_numbers[match.group(2).strip()] = match.group(1)

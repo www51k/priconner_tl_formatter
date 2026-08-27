@@ -5,10 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from character_aliases import CHARACTER_ALIASES
+
 CHARACTERS = ("アオイ", "ネラ", "ツムギ", "ペコ", "シェフィ")
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
-DISPLAY_NAMES = {name: name for name in CHARACTERS}
+DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES
 TIME_RE = re.compile(r"\d+:\d{2}(?:-\d{2})?")
 TIME_TOKEN_RE = re.compile(r"(?<!\d)(\d+):(\d{1,2})(?:-(\d{1,2}))?")
 BARE_TIME_RE = re.compile(r"\d{1,2}(?=\s|　|$)")
@@ -19,6 +21,7 @@ FORMATION_OFF_CHARS = "Xx×✖✕☓_ー－—-─＿"
 FORMATION_RE = re.compile(
     rf"\[?[{re.escape(FORMATION_ON_CHARS + FORMATION_OFF_CHARS)}]{{5}}\]?"
 )
+FORMATION_ENTRY_RE = re.compile(r"\(([54321])\)([^|)\]]+)")
 
 
 def normalize_input_line(line: str) -> str:
@@ -44,6 +47,8 @@ def normalize_input_line(line: str) -> str:
         if MASK_RE.search(head) is None:
             return source
     head = head.replace("【", "[").replace("】", "]")
+    # 実データでは全角括弧がキャラ名の注記にも使われるため、
+    # 構造マスクの括弧だけを先に正規化し、注記本文は保持する。
     head = head.replace("〇️", "O").replace("〇", "O")
     formation = FORMATION_RE.search(head)
     if formation:
@@ -67,7 +72,8 @@ def normalize_input_line(line: str) -> str:
     head = re.sub(r"[\"“”「」『』]\s*(🅰️(?:ON|OFF))\s*[\"“”「」『』]", r"\1", head)
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)", "⭐️", head)
-    head = re.sub(r"^[ \t　]*(?:->|>|➡︎|⇨|⇒)", "　　→", head)
+    # 理想出力では矢印の前を全角3文字に統一する。
+    head = re.sub(r"^[ \t　]*(?:->|>|→|➡︎|⇨|⇒)", "　　　→", head)
     head = re.sub(r"[ \t]+", "　", head)
     return head + (separator + comment if separator else "")
 
@@ -81,6 +87,20 @@ class Event:
     star: bool
     arrow: bool
     mask: str | None
+
+
+def character_names_from_formation(text: str) -> dict[str, str]:
+    """編成表から正式名・略称と固定番号の対応を取り出す。"""
+    numbers: dict[str, str] = {}
+    for line in text.splitlines():
+        for match in FORMATION_ENTRY_RE.finditer(line):
+            formal_name = match.group(2).strip()
+            number = match.group(1)
+            numbers[formal_name] = number
+            alias = DISPLAY_NAMES.get(formal_name)
+            if alias and alias not in numbers:
+                numbers[alias] = number
+    return numbers
 
 
 def mask_for(numbers: set[str]) -> str:
@@ -125,7 +145,11 @@ def is_event_line(line: str) -> bool:
     return bool(MASK_RE.search(stripped) and not stripped.startswith("["))
 
 
-def parse_event(line_no: int, line: str) -> Event:
+def parse_event(
+    line_no: int,
+    line: str,
+    character_names: dict[str, str] | None = None,
+) -> Event:
     mask_match = MASK_RE.search(line)
     mask = mask_match.group(1) if mask_match else None
     if not is_event_line(line):
@@ -137,8 +161,9 @@ def parse_event(line_no: int, line: str) -> Event:
     prefix = line
 
     # 名前の直後は、区切り空白・SETマスク・行末のいずれかであることを要求する。
-    for candidate in CHARACTERS:
-        match = re.search(re.escape(candidate) + r"(?=　|\s|\[|$)", line)
+    candidates = list(character_names or {}) + list(CHARACTERS)
+    for candidate in sorted(set(candidates), key=len, reverse=True):
+        match = re.search(re.escape(candidate) + r"(?=　|\s|\[|\(|（|$)", line)
         if match:
             name = candidate
             prefix = line[: match.start()]
@@ -151,8 +176,11 @@ def parse_event(line_no: int, line: str) -> Event:
         body = re.sub(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*", "", body)
         body = re.sub(r"^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*", "", body)
         body = re.sub(r"^→\s*", "", body)
-        generic = re.match(r"([^\s　\[\]]+)(?=[\s　\[]|$)", body)
-        if generic and len(generic.group(1)) <= 4:
+        generic = re.match(r"([^\s　\[\]【】()（）]+)(?=[\s　\[\(（]|$)", body)
+        if generic and (
+            len(generic.group(1)) <= 4
+            or generic.group(1) in (character_names or {})
+        ):
             name = generic.group(1)
             prefix = line[: line.find(name)]
 
@@ -162,8 +190,11 @@ def parse_event(line_no: int, line: str) -> Event:
         body = re.sub(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*", "", body)
         body = re.sub(r"^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*", "", body)
         body = re.sub(r"^→\s*", "", body)
-        generic = re.match(r"([^\s　\[\]]+)(?=[\s　\[]|$)", body)
-        if generic and len(generic.group(1)) <= 4:
+        generic = re.match(r"([^\s　\[\]【】()（）]+)(?=[\s　\[\(（]|$)", body)
+        if generic and (
+            len(generic.group(1)) <= 4
+            or generic.group(1) in (character_names or {})
+        ):
             name = generic.group(1)
             prefix = line[: line.find(name)]
 
@@ -174,7 +205,11 @@ def parse_event(line_no: int, line: str) -> Event:
     return Event(line_no, line, prefix, name, star, arrow, mask)
 
 
-def render_event(event: Event, mask: str | None = None) -> str:
+def render_event(
+    event: Event,
+    mask: str | None = None,
+    allow_long_name: bool = False,
+) -> str:
     """イベント行のキャラ欄とSET表記を正規化する。"""
     if not event.name:
         return event.raw
@@ -187,9 +222,9 @@ def render_event(event: Event, mask: str | None = None) -> str:
         prefix += "　"
 
     display_name = DISPLAY_NAMES.get(event.name, event.name)
-    if len(display_name) > 4:
+    if len(display_name) > 4 and not allow_long_name:
         raise ValueError(f"表示名が全角4文字を超えています。4文字略称を登録してください: {event.name}")
-    name_field = display_name + "　" * (4 - len(display_name))
+    name_field = display_name + "　" * max(0, 4 - len(display_name))
     rest = event.raw[event.raw.find(event.name) + len(event.name):]
     rest = MASK_RE.sub("", rest)
     rest = rest.strip(" \t　")
