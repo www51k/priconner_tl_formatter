@@ -48,9 +48,15 @@ formationList.addEventListener("input", () => {
 });
 
 function pickCharacters(source) {
-  const excluded = new Set(["開始時", "開始", "バトル開始", "ボス", "止めぽ", "AUTO", "オート"]);
+  const excluded = new Set(["開始時", "開始", "バトル開始", "ボス", "ボスUB", "敵", "敵UB", "止めぽ", "AUTO", "オート"]);
   const names = [];
   for (const rawLine of source.split("\n")) {
+    const candidateLine = rawLine.trimStart();
+    const isTimedLine = /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?/.test(candidateLine)
+      || /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*\d{1,2}(?=\s|　)/.test(candidateLine);
+    const isArrowLine = /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒|->|>)/.test(candidateLine);
+    // 使用キャラ説明やコメント中の単語ではなく、時間行・矢印行だけから拾う。
+    if (!isTimedLine && !isArrowLine) continue;
     const line = rawLine.split("//", 1)[0]
       .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*/, "")
       .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
@@ -62,6 +68,7 @@ function pickCharacters(source) {
     if (
       name
       && !excluded.has(name)
+      && !/^(?:ボス|敵)(?:UB)?$/.test(name)
       && !/^タゲ|^ターゲット/.test(name)
       && name.length <= 8
       && !names.includes(name)
