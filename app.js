@@ -13,10 +13,33 @@ const reviewContent = document.querySelector("#review-content");
 const formationList = document.querySelector("#formation-list");
 const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
+const FORMATION_CACHE_KEY = "tl-formatter.formation.v1";
 
 let pyodidePromise;
 let draggedSlot = null;
 let formationTouched = false;
+
+function saveFormationCache() {
+  try {
+    const names = [...formationList.querySelectorAll("input")].map((field) => field.value);
+    localStorage.setItem(FORMATION_CACHE_KEY, JSON.stringify(names));
+  } catch (_) {
+    // プライベートブラウズ等で保存できない場合も、整形処理は継続する。
+  }
+}
+
+function restoreFormationCache() {
+  try {
+    const names = JSON.parse(localStorage.getItem(FORMATION_CACHE_KEY) || "null");
+    if (!Array.isArray(names) || names.length !== 5) return;
+    [...formationList.querySelectorAll("input")].forEach((field, index) => {
+      field.value = typeof names[index] === "string" ? names[index] : "";
+    });
+    formationTouched = names.some((name) => name.trim());
+  } catch (_) {
+    // 保存データが壊れていても、空の編成欄から開始する。
+  }
+}
 
 function updateSlotNumbers() {
   [...formationList.children].forEach((slot, index) => {
@@ -33,6 +56,7 @@ formationList.addEventListener("dragstart", (event) => {
 formationList.addEventListener("dragend", () => {
   if (draggedSlot) draggedSlot.classList.remove("dragging");
   draggedSlot = null;
+  saveFormationCache();
 });
 formationList.addEventListener("dragover", (event) => {
   event.preventDefault();
@@ -45,6 +69,7 @@ formationList.addEventListener("dragover", (event) => {
 
 formationList.addEventListener("input", () => {
   formationTouched = true;
+  saveFormationCache();
 });
 
 function pickCharacters(source) {
@@ -244,4 +269,5 @@ copyButton.addEventListener("click", async () => {
   setTimeout(() => { copyButton.textContent = "コピー"; }, 1400);
 });
 
+restoreFormationCache();
 loadPython().then(() => setStatus("準備完了", "ready")).catch((error) => setStatus(`読み込みに失敗しました: ${error.message}`, "error"));
