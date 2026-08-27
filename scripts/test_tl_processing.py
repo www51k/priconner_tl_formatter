@@ -120,6 +120,17 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn('0:27　波レ　　　"オート"', formatted)
         self.assertIn('→　猫　　　　"オート"', formatted)
 
+    def test_quoted_auto_condition_adds_state_transitions(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "　　　→　ペコ　　//チャレンジTP起動\n"
+            "0:27　アオイ　\"オート\"　//この時点で通常Hit前\n"
+            "⇒ネラ　\"オート\"\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("[5--2-]🅰️ON　//チャレンジTP起動", result)
+        self.assertIn('ネラ🅰️OFF　"オート"', result)
+
     def test_single_quote_between_set_and_auto_is_removed(self) -> None:
         self.assertEqual(
             format_text("1:30　バトル開始　[54---]'🅰️OFF\n"),

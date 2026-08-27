@@ -505,6 +505,42 @@ def add_operations(
         if event.name in character_numbers:
             rendered[index] = render_event(event, masks.get(index))
 
+    def add_auto_state(line: str, state: str) -> str:
+        """UB条件メモの前後へオート状態だけを追加する。"""
+        if f"🅰️{state}" in line:
+            return line
+        head, separator, comment = line.partition("//")
+        auto_note = re.search(r'''["「『]オート["」』]''', head)
+        if auto_note:
+            head = (
+                head[: auto_note.start()].rstrip(" \t　")
+                + f"🅰️{state}　"
+                + head[auto_note.start():]
+            )
+        else:
+            trailing = re.search(r"[ \t　]*$", head).group(0)
+            head = head[: len(head) - len(trailing)] + f"🅰️{state}" + trailing
+        return head + (separator + comment if separator else "")
+
+    # 引用符付き「オート」は操作表記へ変換せず、UB条件区間の前後へ
+    # オート状態を付ける。区間内のメモ本文は原文のまま保持する。
+    auto_indexes = [
+        index
+        for index, event in enumerate(events)
+        if event.name and re.search(r'''["「『]オート["」』]''', lines[index])
+    ]
+    groups: list[list[int]] = []
+    for index in auto_indexes:
+        if groups and index == groups[-1][-1] + 1:
+            groups[-1].append(index)
+        else:
+            groups.append([index])
+    for group in groups:
+        previous = previous_event(group[0])
+        if previous is not None:
+            rendered[previous] = add_auto_state(rendered[previous], "ON")
+        rendered[group[-1]] = add_auto_state(rendered[group[-1]], "OFF")
+
     output: list[str] = []
     for index, line in enumerate(rendered):
         output.append(line)
