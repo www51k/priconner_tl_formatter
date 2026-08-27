@@ -177,11 +177,15 @@ def tl_declarations(text: str) -> list[tuple[str, str]]:
     declarations: list[tuple[str, str]] = []
     for index, line in enumerate(lines[:first_event]):
         formal = line.strip()
-        if (
-            not formal
-            or formal.startswith(("\\", "ーー", "--", "//", "TL表記"))
-            or re.search(r"[ \t　]", formal)
-        ):
+        if not formal or formal.startswith(("\\", "ーー", "--", "//", "TL表記")):
+            continue
+        # 別形式の編成メモ（例: ``キュリア R42最強 CR15 クリア``）は、
+        # 行頭をTL表記、末尾を正式名として扱う。
+        reverse_alias = re.fullmatch(r"(\S+)\s+.*\s+(\S+)", formal)
+        if reverse_alias and re.search(r"\bCR\d+\b", formal, re.IGNORECASE):
+            declarations.append((reverse_alias.group(2), reverse_alias.group(1)))
+            continue
+        if re.search(r"[ \t　]", formal):
             continue
         next_index = index + 1
         while next_index < first_event and (

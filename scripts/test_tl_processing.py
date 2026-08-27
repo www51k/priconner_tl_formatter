@@ -290,6 +290,20 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("1:30　クロ　　　[54321]", formatted)
         self.assertIn("1:20　ペコ　　　[54321]", formatted)
 
+    def test_reverse_alias_declarations_map_tl_name_to_formal_name(self) -> None:
+        text = (
+            "キュリア　R42最強　CR15　クリア\n"
+            "リリア　R42最強　CR15　リリ\n"
+            "アリシア　R42最強　CR15　プレシア\n"
+            "水モネ　R42最強　CR15　アネモネ\n"
+            "ニュサレ　R42最強　CR15　サレン\n"
+            "[✕〇✕✕✕]off\n"
+            "1:20　キュリア\n"
+        )
+        result = format_text(text)
+        self.assertIn("1:20　クリア", result)
+        self.assertNotIn("1:20　キュリア", result)
+
     def test_learning_style_time_and_name_without_separator(self) -> None:
         formatted = format_text("1:16サレン通常戻り目安\n0:17フィオ\n1:02★ペコの通常開始見てオートON\n")
         self.assertIn("1:16　サレン", formatted)
