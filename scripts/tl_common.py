@@ -5,12 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from character_aliases import CHARACTER_ALIASES
+from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
 
 CHARACTERS = ("アオイ", "ネラ", "ツムギ", "ペコ", "シェフィ")
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
-DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES
+DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES | LEARNED_NAME_ALIASES
 TIME_RE = re.compile(r"\d+:\d{2}(?:-\d{2})?")
 TIME_TOKEN_RE = re.compile(r"(?<!\d)(\d+):(\d{1,2})(?:-(\d{1,2}))?")
 BARE_TIME_RE = re.compile(r"\d{1,2}(?=\s|　|$)")
@@ -27,7 +27,13 @@ FORMATION_ENTRY_RE = re.compile(r"\(([54321])\)([^|)\]]+)")
 def normalize_input_line(line: str) -> str:
     """コメントを保護したまま、入力行の構造部分だけを正規化する。"""
     source = str(line).rstrip("\r")
-    head, separator, comment = source.partition("//")
+    # // と '' は備考の開始位置。最初に現れた方以降を完全保持する。
+    comment_positions = [pos for pos in (source.find("//"), source.find("''")) if pos >= 0]
+    if comment_positions:
+        comment_start = min(comment_positions)
+        head, comment = source[:comment_start], source[comment_start:]
+    else:
+        head, comment = source, ""
     # 丸・ばつの絵文字は先に1文字へ寄せてから5文字マスクを判定する。
     head = head.replace("⭕️", "O").replace("⭕", "O")
     head = head.replace("❌", "X")
@@ -47,6 +53,10 @@ def normalize_input_line(line: str) -> str:
         if MASK_RE.search(head) is None:
             return source
     head = head.replace("【", "[").replace("】", "]")
+    # 投稿で使われる省略表記を、SETマスクとして採用する。コメントは
+    # 上で切り離しているため、備考中の同じ語は変更しない。
+    head = re.sub(r"全解除", "[-----]", head)
+    head = re.sub(r"全set", "[54321]", head, flags=re.IGNORECASE)
     # 実データでは全角括弧がキャラ名の注記にも使われるため、
     # 構造マスクの括弧だけを先に正規化し、注記本文は保持する。
     head = head.replace("〇️", "O").replace("〇", "O")
@@ -62,28 +72,53 @@ def normalize_input_line(line: str) -> str:
             for index, char in enumerate(converted)
         )
         head = head[: formation.start()] + f"[{converted}]" + head[formation.end() :]
-    head = re.sub(
+    # キャラ間矢印より後ろは後続キャラ・備考の領域。オート表記を
+    # 前のキャラへ誤付与しないよう、矢印前だけ正規化する。
+    arrow_boundary = re.search(r"(?:→|⇒|->|➡︎|➡|⇨|↦)", head)
+    if arrow_boundary and not head[: arrow_boundary.start()].strip():
+        # 矢印から始まる継続行（⇒ニュリノ）は、その行のオート操作を
+        # 継続先へ適用するため、通常どおり正規化する。
+        arrow_boundary = None
+    auto_head = head[: arrow_boundary.start()] if arrow_boundary else head
+    auto_tail = head[arrow_boundary.start() :] if arrow_boundary else ""
+    # オート語だけを強調したMarkdown装飾は不要なので外す。文章全体を
+    # 強調しているケース（例: **オートonの方が良いかも**）には一致しない。
+    bold_auto = r"\*\*((?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ))\*\*"
+    auto_head = re.sub(bold_auto, r"\1", auto_head, flags=re.IGNORECASE)
+    auto_tail = re.sub(bold_auto, r"\1", auto_tail, flags=re.IGNORECASE)
+    auto_head = re.sub(
         r'''["「『]?(?:オート|AUTO)[ \t　]*(ON|OFF|オン|オフ)["」』]?''',
         lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",
-        head,
+        auto_head,
         flags=re.IGNORECASE,
     )
     # YouTube備考欄・Discord投稿では、SETマスクの後ろに裸の on/off が
     # 付くことがある。コメント本文ではなく構造部だけを対象にする。
-    head = re.sub(
+    auto_head = re.sub(
         r"(?<!🅰️)(?<![A-Za-z])(ON|OFF|オン|オフ)(?![A-Za-z])",
         lambda match: "🅰️ON" if match.group(1).upper() in {"ON", "オン"} else "🅰️OFF",
-        head,
+        auto_head,
         flags=re.IGNORECASE,
     )
+    head = auto_head + auto_tail
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"[\"“”「」『』]\s*(🅰️(?:ON|OFF))\s*[\"“”「」『』]", r"\1", head)
+    # YouTube/Discordの転記でSETとオート表記の間に残る単独の
+    # アポストロフィだけを除去する。備考記号の ``''`` は保持する。
+    head = re.sub(r"(?<!')['’](?=🅰️)|(?<=🅰️)['’](?!')", "", head)
     head = re.sub(r"(\[[54321-]{5}\])[ \t　]+(🅰️(?:ON|OFF))", r"\1\2", head)
     head = re.sub(r"^[ \t　]*(?:⭐️|⭐︎|⭐|★|☆)", "⭐️", head)
+    # 投稿では時刻の後ろに手動記号が置かれることがあるが、手動UBの
+    # 判定と表示を一貫させるため時刻の前へ移す。
+    head = re.sub(
+        r"^([ \t　]*)(\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?)([ \t　]*)(?:⭐️|⭐︎|⭐|★|☆)",
+        r"\1⭐️\2\3",
+        head,
+    )
     # 理想出力では矢印の前を全角3文字に統一する。
     head = re.sub(r"^[ \t　]*(?:->|>|→|➡︎|⇨|⇒)", "　　　→", head)
     head = re.sub(r"[ \t]+", "　", head)
-    return head + (separator + comment if separator else "")
+    return head + comment
 
 
 @dataclass
@@ -169,13 +204,37 @@ def parse_event(
     prefix = line
 
     # 名前の直後は、区切り空白・SETマスク・行末のいずれかであることを要求する。
-    candidates = list(character_names or {}) + list(CHARACTERS)
+    # Discord/YouTube由来のTLは編成表を含まないことが多い。編成表が
+    # ない場合でも、既知の正式名・略称を候補にしてキャラ欄を分離する。
+    candidates = list(character_names or {}) + list(DISPLAY_NAMES) + list(CHARACTERS)
     for candidate in sorted(set(candidates), key=len, reverse=True):
         match = re.search(re.escape(candidate) + r"(?=　|\s|\[|\(|（|$)", line)
         if match:
             name = candidate
             prefix = line[: match.start()]
             break
+
+    if name is None:
+        # 学習データでは時刻とキャラ名が連結した行（1:16サレン）や、
+        # 時刻直後に手動記号が付く行（1:02★ペコ）がある。通常の
+        # 「キャラ名と備考の連結」には適用せず、時刻との境界だけ補う。
+        time_match = re.match(r"^(.*?\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?)(.*)$", line)
+        if time_match:
+            between = time_match.group(2)
+            body = between.lstrip("　 \t")
+            star_prefix = re.match(r"(?:⭐️|⭐︎|⭐|★|☆)", body)
+            if star_prefix:
+                body = body[star_prefix.end():]
+            had_separator = bool(re.match(r"^[　 \t]", between))
+            for candidate in sorted(set(candidates), key=len, reverse=True):
+                if not body.startswith(candidate):
+                    continue
+                # 空白で区切られていた行は、★/⭐️付きだけを対象にする。
+                if had_separator and not star_prefix:
+                    continue
+                name = candidate
+                prefix = line[: line.find(candidate)]
+                break
 
     if name is None and mask is not None:
         # CHARACTERSに未登録のキャラも書式整形だけは可能にする。
@@ -234,7 +293,8 @@ def render_event(
         raise ValueError(f"表示名が全角4文字を超えています。4文字略称を登録してください: {event.name}")
     name_field = display_name + "　" * max(0, 4 - len(display_name))
     rest = event.raw[event.raw.find(event.name) + len(event.name):]
-    rest = MASK_RE.sub("", rest)
+    # 先頭のSETマスクだけを取り出し、備考中の追加マスクは保持する。
+    rest = MASK_RE.sub("", rest, count=1)
     rest = rest.strip(" \t　")
 
     auto_match = re.search(r"🅰️(?:ON|OFF)", rest)

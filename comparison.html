@@ -23,6 +23,10 @@
     .toolbar label { display: flex; align-items: center; gap: 6px; font-weight: 400; }
     #summary { min-height: 1.4em; color: #334155; }
     .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    #comparison-list { display: grid; gap: 18px; }
+    .comparison-card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: white; }
+    .comparison-card h2 { margin: 0 0 10px; font-size: 1rem; }
+    .comparison-card .compare { gap: 10px; }
     .panel { min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: white; }
     .panel h2 { margin: 0; padding: 10px 12px; font-size: 1rem; background: #e2e8f0; }
     .code { overflow: auto; max-height: calc(100vh - 245px); }
@@ -69,7 +73,8 @@
       <label><input id="wrap" type="checkbox"> 長い行を折り返す</label>
       <span id="summary" role="status"></span>
     </div>
-    <section class="compare">
+    <section id="comparison-list"></section>
+    <section class="compare" hidden>
       <article class="panel">
         <h2 id="original-title">原本</h2>
         <div id="original-view" class="code"><div class="empty">原本ファイルを選択してください</div></div>
@@ -88,8 +93,33 @@
     const summary = document.querySelector("#summary");
     const originalView = document.querySelector("#original-view");
     const formattedView = document.querySelector("#formatted-view");
+    const comparisonList = document.querySelector("#comparison-list");
     const files = { original: new Map(), formatted: new Map() };
     const defaultPairs = new Map();
+    const learnedExamples = [
+      {
+        name: "学習例_001",
+        original: "1:20　キュリア　ピアースcl早め　[〇〇✕〇✕]on\n",
+        formatted: "1:20　キュリア　[54-2-]🅰️ON　ピアースcl早め\n",
+        originalTitle: "学習データ（過去指定例）",
+        formattedTitle: "変換後（期待形式）",
+      },
+      {
+        name: "学習例_002",
+        original: "1:18　プレシア（オート）　[✕〇✕✕✕]off\n",
+        formatted: "1:18　プレシア　[-4---]🅰️OFF　（オート）\n",
+        originalTitle: "学習データ（過去指定例）",
+        formattedTitle: "変換後（期待形式）",
+      },
+      {
+        name: "学習例_003",
+        original: "1:20　クリア　ピアースcl早め　[〇〇✕〇✕]on\n　　⇒リリア\n　　⇒サレン\n",
+        formatted: "1:20　クリア　[54-2-]🅰️ON　ピアースcl早め\n　　　→　リリア\n　　　→　サレン\n",
+        originalTitle: "学習データ（過去指定例）",
+        formattedTitle: "変換後（期待形式）",
+      },
+    ];
+    for (const example of learnedExamples) defaultPairs.set(example.name, example);
 
     function key(name) {
       return name.replace(/\.(?:org|txt|md)$/i, "");
@@ -144,6 +174,45 @@
       });
       table.append(body);
       container.replaceChildren(table);
+    }
+
+    function renderExampleList(examples) {
+      comparisonList.replaceChildren();
+      for (const [index, example] of examples.entries()) {
+        const originalLines = example.original.split(/\r?\n/);
+        const formattedLines = example.formatted.split(/\r?\n/);
+        const max = Math.max(originalLines.length, formattedLines.length);
+        let changed = 0;
+        for (let i = 0; i < max; i++) if (originalLines[i] !== formattedLines[i]) changed++;
+
+        const card = document.createElement("article");
+        card.className = "comparison-card";
+        const title = document.createElement("h2");
+        title.textContent = `${index + 1}. ${example.name}　差分 ${changed}行 / 全${max}行`;
+        const columns = document.createElement("div");
+        columns.className = "compare";
+        const left = document.createElement("article");
+        left.className = "panel";
+        const leftTitle = document.createElement("h2");
+        leftTitle.textContent = example.originalTitle || "学習データ";
+        const leftCode = document.createElement("div");
+        leftCode.className = "code";
+        const right = document.createElement("article");
+        right.className = "panel";
+        const rightTitle = document.createElement("h2");
+        rightTitle.textContent = example.formattedTitle || "変換後";
+        const rightCode = document.createElement("div");
+        rightCode.className = "code";
+        lineTable(leftCode, example.original, formattedLines, "left");
+        lineTable(rightCode, example.formatted, originalLines, "right");
+        leftCode.addEventListener("scroll", () => syncScroll(leftCode, rightCode));
+        rightCode.addEventListener("scroll", () => syncScroll(rightCode, leftCode));
+        left.append(leftTitle, leftCode);
+        right.append(rightTitle, rightCode);
+        columns.append(left, right);
+        card.append(title, columns);
+        comparisonList.append(card);
+      }
     }
 
     function renderComparison(name, original, formatted, originalTitle = name + ".org", formattedTitle = name + ".txt") {
@@ -232,9 +301,17 @@
             formattedTitle: formattedPath,
           };
         }));
-        const available = loaded.filter(Boolean);
+        let collectedExamples = [];
+        try {
+          const learningResponse = await fetch("/.codex/discord_tl_collection/learning_comparison.json");
+          if (learningResponse.ok) collectedExamples = await learningResponse.json();
+        } catch (_) {
+          // The private local learning payload is optional on GitHub Pages.
+        }
+        const available = [...collectedExamples, ...learnedExamples, ...loaded.filter(Boolean)];
         if (!available.length) return;
         for (const pair of available) defaultPairs.set(pair.name, pair);
+        renderExampleList([...collectedExamples, ...learnedExamples]);
         pairSelect.replaceChildren(...available.map((pair) => new Option(pair.name, pair.name)));
         pairSelect.value = available[0].name;
         pairSelect.disabled = false;

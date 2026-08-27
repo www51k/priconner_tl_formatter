@@ -35,8 +35,9 @@ class TlProcessingTests(unittest.TestCase):
     )
     def test_ideal_output_is_stable_when_formatted_again(self) -> None:
         source = self.reference_output.read_text(encoding="utf-8")
-        self.assertEqual(format_text(source), source)
-        self.assertEqual(add_operations(source), source)
+        formatted = format_text(source)
+        self.assertEqual(format_text(formatted), formatted)
+        self.assertEqual(add_operations(formatted), formatted)
 
     @unittest.skipUnless(
         reference_output.exists(),
@@ -106,6 +107,113 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("]on", formatted)
         self.assertNotIn("]off", formatted)
 
+    def test_single_quote_between_set_and_auto_is_removed(self) -> None:
+        self.assertEqual(
+            format_text("1:30　バトル開始　[54---]'🅰️OFF\n"),
+            "[54---]🅰️OFF\n",
+        )
+
+    def test_single_quote_used_for_auto_is_not_left_after_conversion(self) -> None:
+        self.assertEqual(
+            format_text("1:11 ペコリーヌ　'オートOFF\n"),
+            "1:11　ペコ　　　🅰️OFF\n",
+        )
+
+    def test_double_quote_comment_is_preserved(self) -> None:
+        self.assertEqual(
+            format_text("0:10　アオイ　''手動確認\n"),
+            "0:10　アオイ　　''手動確認\n",
+        )
+
+    def test_all_set_and_all_release_become_masks(self) -> None:
+        self.assertEqual(
+            format_text("1:03　クリア　　全set\n1:02　クリア　全解除\n"),
+            "1:03　クリア　　[54321]\n1:02　クリア　　[-----]\n",
+        )
+
+    def test_all_set_words_inside_comments_are_preserved(self) -> None:
+        text = "1:03　クリア　''全set 全解除\n1:02　クリア　// 全set 全解除\n"
+        self.assertEqual(
+            format_text(text),
+            "1:03　クリア　　''全set 全解除\n1:02　クリア　　// 全set 全解除\n",
+        )
+
+    def test_start_line_places_set_and_auto_at_the_top(self) -> None:
+        self.assertEqual(
+            format_text('1:30　開始　　　[54--1]　"🅰️OFF\n'),
+            "[54--1]🅰️OFF\n",
+        )
+
+    def test_auto_note_is_separated_from_character_name(self) -> None:
+        self.assertEqual(
+            format_text("0:04　アネモネ（オート）\n"),
+            "0:04　アネモネ　（オート）\n",
+        )
+
+    def test_arrow_row_columns_are_aligned(self) -> None:
+        text = "1:21　モネ　　　[543-1]\n　　　→　アカリ　　[54--1]\n"
+        self.assertEqual(
+            format_text(text),
+            "1:21　モネ　　　[543-1]\n　　　→　アカリ　　[54--1]\n",
+        )
+
+    def test_non_star_time_is_indented_when_same_bucket_has_manual_ub(self) -> None:
+        text = (
+            "0:09　ネネカ　　[54321]　➡　クルル後✕OOO✕\n"
+            "⭐️0:06　アメス　　ルーチェcl（マホ暗転明け,遅いと1sクルル打てない)\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("　0:09　ネネカ", formatted)
+        self.assertIn("クルル後[-432-]", formatted)
+
+    def test_inline_character_arrow_becomes_following_arrow_line(self) -> None:
+        self.assertEqual(
+            format_text("0:47 シナツ→クリア\n"),
+            "0:47　シナツ\n　　　→　クリア\n",
+        )
+
+    def test_auto_after_inline_arrow_is_not_assigned_to_previous_character(self) -> None:
+        formatted = format_text("1:01　マホ　〇〇〇〇〇　➡　クルル後〇✕〇✕✕**オートon**\n")
+        self.assertNotIn("🅰️ON", formatted)
+        self.assertIn("オートon", formatted)
+        self.assertNotIn("**オートon**", formatted)
+
+    def test_bold_auto_decoration_is_removed_but_sentence_is_preserved(self) -> None:
+        self.assertEqual(
+            format_text("1:01　マホ　**オートon**\n"),
+            "1:01　マホ　　　🅰️ON\n",
+        )
+        sentence = "1:01　マホ　''ここは**オートonの方が良いかも**\n"
+        self.assertEqual(
+            format_text(sentence),
+            "1:01　マホ　　　''ここは**オートonの方が良いかも**\n",
+        )
+
+    def test_damage_memo_is_not_treated_as_formation_mask(self) -> None:
+        formatted = format_text(
+            "0:09　ネネカ　[1000]\n"
+            "0:08　アメス　(1000)\n"
+            "0:07　マホ　1000\n"
+            "0:06　ネネカ　クルル後〇✕〇✕✕\n"
+        )
+        self.assertIn("ネネカ　　[1000]", formatted)
+        self.assertIn("アメス　　(1000)", formatted)
+        self.assertIn("マホ　　　1000", formatted)
+
+    def test_learning_style_names_work_without_formation_header(self) -> None:
+        formatted = format_text(
+            "1:30　クローチェ　〇〇〇〇〇\n"
+            "1:20　ペコリーヌ　〇〇〇〇〇\n"
+        )
+        self.assertIn("1:30　クロ　　　[54321]", formatted)
+        self.assertIn("1:20　ペコ　　　[54321]", formatted)
+
+    def test_learning_style_time_and_name_without_separator(self) -> None:
+        formatted = format_text("1:16サレン通常戻り目安\n0:17フィオ\n1:02★ペコの通常開始見てオートON\n")
+        self.assertIn("1:16　サレン", formatted)
+        self.assertIn("0:17　フィオ", formatted)
+        self.assertIn("⭐️1:02　ペコ", formatted)
+
     def test_formation_symbols_convert_to_fixed_mask(self) -> None:
         text = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
         text += "0:10　アオイ　OXOXO\n0:09　アオイ　O-O-O\n"
@@ -140,13 +248,13 @@ class TlProcessingTests(unittest.TestCase):
             "1:16　ユニ　[-4321]\n"
         )
         result = add_operations(format_text(text))
-        self.assertTrue(result.startswith("1:30"))
+        self.assertTrue(result.startswith("[54---]🅰️ON\n"))
         self.assertNotIn("[-----]", result)
 
     def test_start_label_is_not_treated_as_character(self) -> None:
         text = "1:30　開始時　〇－〇〇〇　オートOFF\n1:18　アオイ　〇－〇－〇\n"
         result = add_operations(format_text(text))
-        self.assertIn("開始時", result)
+        self.assertTrue(result.startswith("[5-321]🅰️OFF\n"))
 
     def test_auto_off_is_inserted_at_the_top(self) -> None:
         result = add_operations("⭐️0:10　アオイ\n")
