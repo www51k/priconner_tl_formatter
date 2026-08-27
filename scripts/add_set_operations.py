@@ -594,7 +594,9 @@ def add_operations(
         if index in standalone_after:
             output.append(standalone_after[index])
 
-    if not explicit_start and not any("🅰️OFF" in line for line in output):
+    # 後半の自動解除（🅰️OFF）が存在しても、先頭の初期SETとは別物。
+    # 開始SETが原文にない場合は必ず先頭へ追加する。
+    if not explicit_start:
         if output and output[0].startswith("[(") and "|" in output[0]:
             output = output[:1] + ["", f"[{effective_initial}]🅰️OFF"] + output[1:]
         else:

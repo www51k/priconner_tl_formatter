@@ -397,6 +397,15 @@ class TlProcessingTests(unittest.TestCase):
         )
         self.assertIn("[--32-]", result)
 
+    def test_initial_set_is_not_suppressed_by_later_auto_off(self) -> None:
+        text = (
+            "[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n"
+            "⭐️0:27　波レ\n"
+            "0:26　尻　\"オート\"\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertTrue(result.startswith("[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n\n[-----]🅰️OFF"))
+
     def test_formation_header_maps_unregistered_characters(self) -> None:
         text = (
             "[(5)ユニ|(4)スミレ|(3)グレイス|(2)ルルィ|(1)シオリ]\n"
