@@ -162,6 +162,29 @@ function applyFormation(source, header) {
   return `${header}\n${lines.join("\n")}`;
 }
 
+function ensureInitialSet(text) {
+  const lines = text.split("\n");
+  const headerIndex = lines.findIndex((line) => line.startsWith("[(") && line.includes("|"));
+  const firstEventIndex = lines.findIndex((line) =>
+    /\d{1,2}:\d{1,2}/.test(line)
+    || /^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒)/.test(line));
+  const end = firstEventIndex < 0 ? lines.length : firstEventIndex;
+  const start = headerIndex >= 0 ? headerIndex + 1 : 0;
+  if (lines.slice(start, end).some((line) => /^\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*$/.test(line))) {
+    return text;
+  }
+  if (headerIndex < 0) {
+    const firstNonEmpty = lines.findIndex((line) => line.trim());
+    if (firstNonEmpty >= 0 && /^\s*\[[54321-]{5}\]/.test(lines[firstNonEmpty])) {
+      return text;
+    }
+    lines.unshift("[-----]🅰️OFF", "");
+  } else {
+    lines.splice(headerIndex + 1, 0, "", "[-----]🅰️OFF", "");
+  }
+  return lines.join("\n");
+}
+
 function setStatus(message, kind = "") {
   status.textContent = message;
   status.className = `status ${kind}`;
@@ -175,7 +198,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260828-formatter-8`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260828-formatter-9`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -225,7 +248,7 @@ for error in errors:
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    output.value = data.text;
+    output.value = ensureInitialSet(data.text);
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
