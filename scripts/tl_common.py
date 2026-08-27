@@ -224,10 +224,10 @@ def character_names_from_formation(text: str) -> dict[str, str]:
             if alias and alias not in numbers:
                 numbers[alias] = number
     # 編成表がない投稿では、TL前の正式名／TL表記の5人の列挙順を
-    # 記載順（1,2,3,4,5）をSET位置（5,4,3,2,1）へ対応させる。
+    # 記載順（1,2,3,4,5）を、そのままSET番号へ対応させる。
     declarations = tl_declarations(text)
     if len(declarations) == 5:
-        for number, (formal, tl_name) in zip("54321", declarations):
+        for number, (formal, tl_name) in zip("12345", declarations):
             numbers.setdefault(formal, number)
             numbers.setdefault(tl_name, number)
     return numbers

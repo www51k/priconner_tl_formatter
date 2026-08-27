@@ -18,8 +18,8 @@ from review_tl import collect_review_items  # noqa: E402
 
 
 class TlProcessingTests(unittest.TestCase):
-    reference_source = ROOT / "202608_1b58000_16.org"
-    reference_output = ROOT / "202608_1b58000_16.txt"
+    reference_source = ROOT / "tl" / "202608_1b58000_16.org"
+    reference_output = ROOT / "tl" / "202608_1b58000_16.txt"
 
     @unittest.skipUnless(
         reference_source.exists() and reference_output.exists(),
@@ -299,7 +299,7 @@ class TlProcessingTests(unittest.TestCase):
             "チエル\nTL表記はちぇる\nシオリ\nTL表記は尻\n"
             "ティア\nTL表記はティア\n0:55　波レ\n"
         )
-        self.assertEqual(character_names_from_formation(text)["波レ"], "5")
+        self.assertEqual(character_names_from_formation(text)["波レ"], "1")
 
     def test_manual_line_comments_get_double_quote_marker(self) -> None:
         self.assertIn("⭐️0:10　アオイ　''通常Hit最速", format_text("⭐️0:10　アオイ　通常Hit最速\n"))

@@ -286,7 +286,7 @@
     async function showDefaultPair() {
       try {
         const pairs = [
-          ["202608_3m54200_5", "202608_3m54200_5.org", "202608_3m54200_5.txt"],
+          ["202608_3m54200_5", "tl/202608_3m54200_5.org", "tl/202608_3m54200_5.txt"],
         ];
         const loaded = await Promise.all(pairs.map(async ([name, originalPath, formattedPath]) => {
           const [originalResponse, formattedResponse] = await Promise.all([
