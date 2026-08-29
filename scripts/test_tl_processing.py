@@ -551,6 +551,18 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("[---2-]🅰️OFF", result)
 
+    def test_explicit_set_comment_is_placed_at_the_previous_boss(self) -> None:
+        source_path = ROOT / "tl" / "202608_5b47500_6.org"
+        if not source_path.exists():
+            self.skipTest("ローカルTL fixtureがある場合だけ実行する")
+        result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
+        lines = result.splitlines()
+        boss_line = next(line for line in lines if "0:55　ボス" in line)
+        arrow_line = next(line for line in lines if "→　グレイス" in line and "0:58" not in line)
+        self.assertRegex(boss_line, r"\[[54321-]{5}\]")
+        self.assertRegex(arrow_line, r"[5432]")
+        self.assertNotIn("0:52　シェフィ　[543--]", result)
+
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"

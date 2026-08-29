@@ -313,6 +313,97 @@ def ensure_arrow_successor_masks(text: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
+def apply_explicit_set_timing(text: str) -> str:
+    """``#...SET``の注記を、直前のボス行のSETタイミングへ反映する。"""
+    lines = text.splitlines()
+    character_names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
+    for cue_index, event in enumerate(events):
+        if event.name not in character_names or not re.search(r"#.*SET", lines[cue_index], re.IGNORECASE):
+            continue
+        number = character_names[event.name]
+        boss_index = next(
+            (
+                index
+                for index in range(cue_index - 1, -1, -1)
+                if "ボス" in lines[index] and TIME_TOKEN_RE.search(lines[index])
+            ),
+            None,
+        )
+        if boss_index is None:
+            continue
+        first_later_mask = next(
+            (
+                index
+                for index in range(boss_index + 1, len(lines))
+                if MASK_RE.search(lines[index])
+                and not lines[index].lstrip().startswith("[(")
+            ),
+            None,
+        )
+        if first_later_mask is None:
+            continue
+        later_match = MASK_RE.search(lines[first_later_mask])
+        if later_match is None:
+            continue
+        target_state = numbers_from_mask(later_match.group(1)) | {number}
+        boss_mask = mask_for(target_state)
+        if MASK_RE.search(lines[boss_index]):
+            lines[boss_index] = MASK_RE.sub(boss_mask, lines[boss_index], count=1)
+        else:
+            lines[boss_index] = lines[boss_index].rstrip() + "　" + boss_mask
+
+        # SET指示より前の発動へ対象番号を先行投入しない。
+        for index in range(boss_index):
+            match = MASK_RE.search(lines[index])
+            if match and not lines[index].lstrip().startswith("[("):
+                state = numbers_from_mask(match.group(1))
+                state.discard(number)
+                lines[index] = MASK_RE.sub(mask_for(state), lines[index], count=1)
+
+        # ボス行で確定した同一状態の後続SETは重複なので削除する。
+        for index in range(boss_index + 1, len(lines)):
+            match = MASK_RE.search(lines[index])
+            if not match or lines[index].lstrip().startswith("[("):
+                continue
+            if match.group(1) == boss_mask[1:-1]:
+                if MASK_RE.fullmatch(lines[index].strip()):
+                    lines[index] = ""
+                else:
+                    lines[index] = MASK_RE.sub("", lines[index], count=1).rstrip()
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def ensure_arrow_targets_are_set(text: str) -> str:
+    """最終出力でも、SET発動する矢印先を発動前状態へ含める。"""
+    lines = text.splitlines()
+    names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
+    for index, event in enumerate(events):
+        if not event.arrow or event.manual or event.name not in names:
+            continue
+        number = names[event.name]
+        target_index = index if MASK_RE.search(lines[index]) else next(
+            (
+                candidate
+                for candidate in range(index - 1, -1, -1)
+                if MASK_RE.search(lines[candidate])
+                and not lines[candidate].lstrip().startswith("[(")
+            ),
+            None,
+        )
+        if target_index is None:
+            continue
+        match = MASK_RE.search(lines[target_index])
+        if match and number not in numbers_from_mask(match.group(1)):
+            lines[target_index] = MASK_RE.sub(
+                mask_for(numbers_from_mask(match.group(1)) | {number}),
+                lines[target_index],
+                count=1,
+            )
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def refine_character_set_operations(
     text: str,
     initial: str = "-----",
@@ -843,6 +934,8 @@ def add_operations(
     if not source_has_set and not ignore_original_set:
         character_refined = ensure_arrow_successor_masks(character_refined)
         character_refined = compact_forward_set_operations(character_refined)
+        character_refined = apply_explicit_set_timing(character_refined)
+        character_refined = ensure_arrow_targets_are_set(character_refined)
     return add_auto_operations(character_refined)
 
 
