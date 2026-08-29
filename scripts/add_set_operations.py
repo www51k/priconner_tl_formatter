@@ -148,7 +148,9 @@ def add_operations(
     if not explicit_start:
         first_event = events[first_event_index] if first_event_index < len(events) else None
         if first_event and first_event.name and not first_event.star and not first_event.arrow:
-            effective_initial = mask_for({character_numbers[first_event.name]})[1:-1]
+            first_number = character_numbers.get(first_event.name)
+            if first_number is not None:
+                effective_initial = mask_for({first_number})[1:-1]
 
     def event_seconds(event) -> int | None:
         match = TIME_TOKEN_RE.search(event.prefix)

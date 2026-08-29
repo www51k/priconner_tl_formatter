@@ -438,6 +438,11 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("[-4---]", result)
 
+    def test_unknown_character_without_formation_does_not_crash(self) -> None:
+        text = "0:50　グレイス\n"
+        result = add_operations(format_text(text))
+        self.assertEqual(result, "[-----]🅰️OFF\n\n" + text)
+
     def test_untimed_following_events_are_rendered_as_arrows(self) -> None:
         text = (
             "0:49　スミレ　【〇－－〇〇】\n"
