@@ -585,6 +585,15 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("0:40　ワカナ　　[54--1]", result)
         self.assertNotIn("0:40　ワカナ　　[543-1]", result)
 
+    def test_next_normal_ub_target_is_added_to_an_existing_set(self) -> None:
+        text = (
+            "[(5)ワカナ|(4)シェフィ|(3)フブキ|(2)グレイス|(1)すみれ]\n"
+            "0:39　シェフィ　[5-3--]\n"
+            "0:33　すみれ\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("0:39　シェフィ　[5-3-1]", result)
+
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"

@@ -417,6 +417,49 @@ def ensure_arrow_targets_are_set(text: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
+def ensure_next_normal_targets_are_set(text: str) -> str:
+    """各SET状態へ、その直後に来る通常UBの対象を補う。"""
+    lines = text.splitlines()
+    names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
+    for index, line in enumerate(lines):
+        match = MASK_RE.search(line)
+        if not match or line.lstrip().startswith("[("):
+            continue
+        current_event = events[index]
+        if not current_event.name:
+            current_event = next(
+                (events[candidate] for candidate in range(index - 1, -1, -1) if events[candidate].name),
+                current_event,
+            )
+        if (
+            current_event.manual
+            or current_event.arrow
+            or auto_note_in_line(line)
+        ):
+            continue
+        next_event = next(
+            (
+                event
+                for event in events[index + 1 :]
+                if event.name in names
+            ),
+            None,
+        )
+        if (
+            next_event is None
+            or next_event.arrow
+            or next_event.manual
+            or auto_note_in_line(lines[next_event.line_no - 1])
+        ):
+            continue
+        number = names[next_event.name]
+        state = numbers_from_mask(match.group(1))
+        if number not in state:
+            lines[index] = MASK_RE.sub(mask_for(state | {number}), lines[index], count=1)
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def refine_character_set_operations(
     text: str,
     initial: str = "-----",
@@ -949,6 +992,7 @@ def add_operations(
         character_refined = compact_forward_set_operations(character_refined)
         character_refined = apply_explicit_set_timing(character_refined)
         character_refined = ensure_arrow_targets_are_set(character_refined)
+        character_refined = ensure_next_normal_targets_are_set(character_refined)
     # 生成SETが確定した後にも、矢印先の先行SETを除去する。原本SETを
     # 保持する経路では、明示的なSET注記があるTLだけを安全調整の対象にする。
     if (
@@ -956,6 +1000,7 @@ def add_operations(
         or any(re.search(r"#.*SET", line, re.IGNORECASE) for line in text.splitlines())
     ):
         character_refined = ensure_arrow_successor_masks(character_refined)
+    character_refined = ensure_next_normal_targets_are_set(character_refined)
     return add_auto_operations(character_refined)
 
 
