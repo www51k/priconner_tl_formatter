@@ -993,13 +993,9 @@ def add_operations(
         character_refined = apply_explicit_set_timing(character_refined)
         character_refined = ensure_arrow_targets_are_set(character_refined)
         character_refined = ensure_next_normal_targets_are_set(character_refined)
-    # 生成SETが確定した後にも、矢印先の先行SETを除去する。原本SETを
-    # 保持する経路では、明示的なSET注記があるTLだけを安全調整の対象にする。
-    if (
-        not source_has_set
-        or any(re.search(r"#.*SET", line, re.IGNORECASE) for line in text.splitlines())
-    ):
-        character_refined = ensure_arrow_successor_masks(character_refined)
+    # 生成SET・原本SETにかかわらず、矢印先の先行SETを除去する。
+    # SET済み原本でも、矢印元のマスクに対象が残ると手前で暴発するため。
+    character_refined = ensure_arrow_successor_masks(character_refined)
     character_refined = ensure_next_normal_targets_are_set(character_refined)
     return add_auto_operations(character_refined)
 

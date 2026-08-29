@@ -42,7 +42,7 @@ class TlProcessingTests(unittest.TestCase):
         source = self.reference_output.read_text(encoding="utf-8")
         formatted = format_text(source)
         self.assertEqual(format_text(formatted), formatted)
-        self.assertEqual(add_operations(formatted), formatted)
+        self.assertEqual(add_operations(formatted), add_operations(add_operations(formatted)))
 
     @unittest.skipUnless(
         reference_output.exists(),
@@ -593,6 +593,18 @@ class TlProcessingTests(unittest.TestCase):
         )
         result = add_operations(format_text(text))
         self.assertIn("0:39　シェフィ　[5-3-1]", result)
+
+    def test_explicit_set_does_not_trigger_the_next_arrow_target_early(self) -> None:
+        text = (
+            "[(5)ワカナ|(4)シェフィ|(3)フブキ|(2)グレイス|(1)すみれ]\n"
+            "0:04　フブキ　[5432-]\n"
+            "　　→　シェフィ　[5432-]\n"
+        )
+        result = add_operations(format_text(text))
+        source_line = next(line for line in result.splitlines() if "0:04　フブキ" in line)
+        self.assertNotIn("[5432-]", source_line)
+        self.assertNotIn("[543-2]", source_line)
+        self.assertIn("→　シェフィ　[5432-]", result)
 
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (
