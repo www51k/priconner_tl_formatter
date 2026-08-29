@@ -230,6 +230,27 @@ def character_names_from_formation(text: str) -> dict[str, str]:
         for number, (formal, tl_name) in zip("12345", declarations):
             numbers.setdefault(formal, number)
             numbers.setdefault(tl_name, number)
+    elif not numbers:
+        # 編成表・宣言がない手動TLでも、5人だけが本文へ登場する場合は
+        # ブラウザ版の編成自動入力と同じく、本文の初出順を5→1番へ対応させる。
+        # 5人未満では番号を推測せず、従来どおりSETを自動生成しない。
+        candidates = sorted(
+            set(DISPLAY_NAMES) | set(DISPLAY_NAMES.values()),
+            key=len,
+            reverse=True,
+        )
+        first_seen: list[str] = []
+        for line in text.splitlines():
+            if not re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:\d{1,2}:\d{1,2}|\d{1,2}(?=\s|　)|→|➡︎|⇨|⇒)", line):
+                continue
+            for candidate in candidates:
+                if re.search(re.escape(candidate) + r"(?=\s|　|\[|\(|（|$)", line):
+                    if candidate not in first_seen:
+                        first_seen.append(candidate)
+                    break
+        if len(first_seen) == 5:
+            for number, name in zip("54321", first_seen):
+                numbers[name] = number
     return numbers
 
 

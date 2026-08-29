@@ -464,6 +464,17 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("🅰️ON", refined)
         self.assertIn("🅰️ON", add_operations(text))
 
+    def test_five_body_characters_get_numbers_without_formation(self) -> None:
+        text = (
+            "1:18　グレイス\n"
+            "1:13　シェフィ\n"
+            "1:10　スミレ\n"
+            "1:09　フブキ\n"
+            "1:08　ワカナ\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("[5----]", result)
+
     def test_untimed_following_events_are_rendered_as_arrows(self) -> None:
         text = (
             "0:49　スミレ　【〇－－〇〇】\n"
