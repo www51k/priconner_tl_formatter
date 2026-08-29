@@ -532,6 +532,25 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("0:29　ネラ　　　 [", result)
         self.assertNotIn("0:29　ネラ　　　[", result)
 
+    def test_arrow_mask_contains_the_next_arrow_target(self) -> None:
+        text = (
+            "[(5)ワカナ|(4)シェフィ|(3)フブキ|(2)グレイス|(1)すみれ]\n"
+            "1:10　スミレ\n"
+            "　　→　フブキ\n"
+            "　　→　グレイス\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("→　フブキ　　[--32-]", result)
+
+    def test_single_arrow_target_is_set_before_the_arrow(self) -> None:
+        text = (
+            "[(5)ワカナ|(4)シェフィ|(3)フブキ|(2)グレイス|(1)すみれ]\n"
+            "1:10　スミレ\n"
+            "　　→　グレイス\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("[---2-]🅰️OFF", result)
+
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"

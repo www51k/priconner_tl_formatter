@@ -223,6 +223,8 @@ def compact_forward_set_operations(text: str) -> str:
                 continue
             left_state = numbers_from_mask(left_match.group(1))
             right_state = numbers_from_mask(right_match.group(1))
+            if not left_state <= right_state:
+                continue
             added = right_state - left_state
             if not added:
                 continue
@@ -259,6 +261,55 @@ def compact_forward_set_operations(text: str) -> str:
                 events[right] = parse_event(right + 1, lines[right], character_names)
             changed = True
             break
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def ensure_arrow_successor_masks(text: str) -> str:
+    """矢印先の発動前後に必要なSET番号を補う。"""
+    lines = text.splitlines()
+    character_names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
+    for index, event in enumerate(events):
+        if not event.arrow or event.name not in character_names:
+            continue
+        current_number = character_names.get(event.name)
+        if event.manual or current_number is None:
+            continue
+        previous_mask = next(
+            (
+                candidate
+                for candidate in range(index - 1, -1, -1)
+                if MASK_RE.search(lines[candidate])
+                and not lines[candidate].lstrip().startswith("[(")
+            ),
+            None,
+        )
+        if previous_mask is not None:
+            previous_match = MASK_RE.search(lines[previous_mask])
+            if previous_match and current_number not in numbers_from_mask(previous_match.group(1)):
+                lines[previous_mask] = MASK_RE.sub(
+                    mask_for(numbers_from_mask(previous_match.group(1)) | {current_number}),
+                    lines[previous_mask],
+                    count=1,
+                )
+        next_arrow = next(
+            (
+                candidate
+                for candidate in events[index + 1 :]
+                if candidate.name is not None
+            ),
+            None,
+        )
+        if next_arrow is None or not next_arrow.arrow:
+            continue
+        number = character_names.get(next_arrow.name)
+        match = MASK_RE.search(lines[index])
+        if number is None or match is None:
+            continue
+        state = numbers_from_mask(match.group(1))
+        if number in state:
+            continue
+        lines[index] = MASK_RE.sub(mask_for(state | {number}), lines[index], count=1)
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
@@ -790,6 +841,7 @@ def add_operations(
         ignore_original_set=ignore_original_set,
     )
     if not source_has_set and not ignore_original_set:
+        character_refined = ensure_arrow_successor_masks(character_refined)
         character_refined = compact_forward_set_operations(character_refined)
     return add_auto_operations(character_refined)
 
