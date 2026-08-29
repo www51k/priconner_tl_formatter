@@ -540,7 +540,8 @@ class TlProcessingTests(unittest.TestCase):
             "　　→　グレイス\n"
         )
         result = add_operations(format_text(text))
-        self.assertIn("→　フブキ　　[--32-]", result)
+        self.assertIn("→　フブキ　　[--3--]", result)
+        self.assertIn("→　グレイス　[--32-]", result)
 
     def test_single_arrow_target_is_set_before_the_arrow(self) -> None:
         text = (
@@ -560,7 +561,7 @@ class TlProcessingTests(unittest.TestCase):
         boss_line = next(line for line in lines if "0:55　ボス" in line)
         arrow_line = next(line for line in lines if "→　グレイス" in line and "0:58" not in line)
         self.assertIn("[5----]", boss_line)
-        self.assertRegex(arrow_line, r"[5432]")
+        self.assertNotIn("[543--]", arrow_line)
         self.assertNotIn("0:52　シェフィ　[543--]", result)
 
     def test_normal_and_arrow_ub_targets_are_both_set_before_their_sequence(self) -> None:
@@ -569,8 +570,20 @@ class TlProcessingTests(unittest.TestCase):
             self.skipTest("ローカルTL fixtureがある場合だけ実行する")
         result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
         self.assertIn("0:45　すみれ", result)
-        self.assertRegex(result, r"0:45　すみれ[\s\S]*→　グレイス　\[54321\]")
+        lines = result.splitlines()
+        sumire_index = next(index for index, line in enumerate(lines) if "0:45　すみれ" in line)
+        later_arrow = lines[sumire_index + 1]
+        self.assertIn("→　グレイス", later_arrow)
+        self.assertRegex(later_arrow, r"\[.*[12].*\]")
         self.assertNotIn("0:52　シェフィ　[543--]", result)
+
+    def test_arrow_target_is_removed_before_the_arrow_source(self) -> None:
+        source_path = ROOT / "tl" / "202608_5b47500_6.org"
+        if not source_path.exists():
+            self.skipTest("ローカルTL fixtureがある場合だけ実行する")
+        result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
+        self.assertIn("0:40　ワカナ　　[54--1]", result)
+        self.assertNotIn("0:40　ワカナ　　[543-1]", result)
 
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (

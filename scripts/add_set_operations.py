@@ -275,23 +275,33 @@ def ensure_arrow_successor_masks(text: str) -> str:
         current_number = character_names.get(event.name)
         if event.manual or current_number is None:
             continue
-        previous_mask = next(
-            (
-                candidate
-                for candidate in range(index - 1, -1, -1)
-                if MASK_RE.search(lines[candidate])
-                and not lines[candidate].lstrip().startswith("[(")
-            ),
+        # 矢印先を、矢印元より前のSETへ追加してはいけない。そこへ追加すると
+        # 次の矢印先が通常発動してしまうため、矢印元の発動前状態から対象を外す。
+        previous_event = next(
+            (candidate for candidate in range(index - 1, -1, -1) if events[candidate].name),
             None,
         )
-        if previous_mask is not None:
-            previous_match = MASK_RE.search(lines[previous_mask])
-            if previous_match and current_number not in numbers_from_mask(previous_match.group(1)):
-                lines[previous_mask] = MASK_RE.sub(
-                    mask_for(numbers_from_mask(previous_match.group(1)) | {current_number}),
-                    lines[previous_mask],
+        if previous_event is not None:
+            previous_match = MASK_RE.search(lines[previous_event])
+            if previous_match and current_number in numbers_from_mask(previous_match.group(1)):
+                previous_state = numbers_from_mask(previous_match.group(1)) - {current_number}
+                lines[previous_event] = MASK_RE.sub(
+                    mask_for(previous_state),
+                    lines[previous_event],
                     count=1,
                 )
+                # 対象は矢印元の後、矢印先の発動時点でだけSETへ戻す。
+                current_match = MASK_RE.search(lines[index])
+                current_state = (
+                    numbers_from_mask(current_match.group(1))
+                    if current_match
+                    else previous_state
+                )
+                target_mask = mask_for(current_state | {current_number})
+                if current_match:
+                    lines[index] = MASK_RE.sub(target_mask, lines[index], count=1)
+                else:
+                    lines[index] = lines[index].rstrip() + "　" + target_mask
         next_arrow = next(
             (
                 candidate
@@ -939,6 +949,13 @@ def add_operations(
         character_refined = compact_forward_set_operations(character_refined)
         character_refined = apply_explicit_set_timing(character_refined)
         character_refined = ensure_arrow_targets_are_set(character_refined)
+    # 生成SETが確定した後にも、矢印先の先行SETを除去する。原本SETを
+    # 保持する経路では、明示的なSET注記があるTLだけを安全調整の対象にする。
+    if (
+        not source_has_set
+        or any(re.search(r"#.*SET", line, re.IGNORECASE) for line in text.splitlines())
+    ):
+        character_refined = ensure_arrow_successor_masks(character_refined)
     return add_auto_operations(character_refined)
 
 
