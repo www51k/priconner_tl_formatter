@@ -346,7 +346,10 @@ def apply_explicit_set_timing(text: str) -> str:
         later_match = MASK_RE.search(lines[first_later_mask])
         if later_match is None:
             continue
-        target_state = numbers_from_mask(later_match.group(1)) | {number}
+        # 注記が指定しているキャラだけを、このボス行でSETする。
+        # 後続マスク全体を前倒しすると、まだ発動していないキャラまで
+        # SET状態になり、後段の手動/通常UBに必要な差分を失う。
+        target_state = {number}
         boss_mask = mask_for(target_state)
         if MASK_RE.search(lines[boss_index]):
             lines[boss_index] = MASK_RE.sub(boss_mask, lines[boss_index], count=1)
@@ -375,12 +378,12 @@ def apply_explicit_set_timing(text: str) -> str:
 
 
 def ensure_arrow_targets_are_set(text: str) -> str:
-    """最終出力でも、SET発動する矢印先を発動前状態へ含める。"""
+    """最終出力でも、SET発動する対象を発動前状態へ含める。"""
     lines = text.splitlines()
     names = character_names_from_formation(text)
     events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
     for index, event in enumerate(events):
-        if not event.arrow or event.manual or event.name not in names:
+        if event.manual or event.name not in names or auto_note_in_line(lines[index]):
             continue
         number = names[event.name]
         target_index = index if MASK_RE.search(lines[index]) else next(
