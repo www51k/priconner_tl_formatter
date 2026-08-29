@@ -88,11 +88,20 @@ def add_auto_state(line: str, state: str) -> str:
     if f"🅰️{state}" in head:
         return line
     auto_note = re.search(r'''["「『]オート["」』]''', head)
-    suffix = "　" if comment else ""
+    before_state = (
+        ""
+        if MASK_RE.search(head)
+        else "　　"
+        if comment.startswith("''")
+        else "　"
+        if comment
+        else ""
+    )
+    after_state = "　" if comment else ""
     if auto_note:
         head = head[: auto_note.start()].rstrip(" \t　") + f"🅰️{state}　" + head[auto_note.start():]
     else:
-        head = head.rstrip(" \t　") + f"🅰️{state}" + suffix
+        head = head.rstrip(" \t　") + before_state + f"🅰️{state}" + after_state
     return head + comment
 
 

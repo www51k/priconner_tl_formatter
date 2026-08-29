@@ -463,7 +463,7 @@ class TlProcessingTests(unittest.TestCase):
         )
         result = add_operations(format_text(text))
         self.assertIn("0:20　グレイス　[54321]🅰️ON", result)
-        self.assertIn("0:18　スミレ🅰️OFF　''オート", result)
+        self.assertIn("0:18　スミレ　　🅰️OFF　''オート", result)
 
     def test_auto_is_a_separate_phase_after_character_set_refinement(self) -> None:
         text = "[-----]🅰️OFF\n0:20　グレイス　[54321]\n0:18　スミレ　　''オート\n"
