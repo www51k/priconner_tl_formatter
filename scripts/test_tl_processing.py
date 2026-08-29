@@ -450,6 +450,7 @@ class TlProcessingTests(unittest.TestCase):
         text = (
             "[-----]🅰️OFF\n"
             "0:20　グレイス　[54321]\n"
+            "0:19　ボス\n"
             "0:18　スミレ　　''オート\n"
             "0:16　グレイス　[54321]\n"
         )

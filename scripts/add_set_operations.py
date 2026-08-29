@@ -103,12 +103,18 @@ def add_auto_operations(text: str) -> str:
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     auto_indexes = [
-        index for index, event in enumerate(events) if event.name and auto_note_in_line(lines[index])
+        index
+        for index, event in enumerate(events)
+        if event.name and event.name != "ボス" and auto_note_in_line(lines[index])
     ]
     groups: list[list[int]] = []
     for index in auto_indexes:
         previous = next(
-            (candidate for candidate in range(index - 1, -1, -1) if events[candidate].name),
+            (
+                candidate
+                for candidate in range(index - 1, -1, -1)
+                if events[candidate].name and events[candidate].name != "ボス"
+            ),
             None,
         )
         if groups and previous == groups[-1][-1]:
@@ -117,7 +123,11 @@ def add_auto_operations(text: str) -> str:
             groups.append([index])
     for group in groups:
         previous = next(
-            (candidate for candidate in range(group[0] - 1, -1, -1) if events[candidate].name),
+            (
+                candidate
+                for candidate in range(group[0] - 1, -1, -1)
+                if events[candidate].name and events[candidate].name != "ボス"
+            ),
             None,
         )
         if previous is not None:
