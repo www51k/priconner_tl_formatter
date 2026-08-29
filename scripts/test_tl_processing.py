@@ -443,6 +443,17 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertEqual(result, "[-----]🅰️OFF\n\n" + text)
 
+    def test_auto_comment_turns_on_before_and_off_after(self) -> None:
+        text = (
+            "[-----]🅰️OFF\n"
+            "0:20　グレイス　[54321]\n"
+            "0:18　スミレ　　''オート\n"
+            "0:16　グレイス　[54321]\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("0:20　グレイス　[54321]🅰️ON", result)
+        self.assertIn("0:18　スミレ🅰️OFF　''オート", result)
+
     def test_untimed_following_events_are_rendered_as_arrows(self) -> None:
         text = (
             "0:49　スミレ　【〇－－〇〇】\n"

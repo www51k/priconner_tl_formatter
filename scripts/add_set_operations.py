@@ -70,6 +70,62 @@ def ensure_initial_operation(text: str, initial: str = "-----") -> str:
     return "\n".join(lines)
 
 
+def auto_note_in_line(line: str) -> bool:
+    """オート操作として扱う明示的なオート記法だけを検出する。"""
+    comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
+    comment_start = min(comment_positions) if comment_positions else len(line)
+    head = line[:comment_start]
+    if re.search(r'''["「『]オート["」』]''', head):
+        return True
+    return bool(re.match(r"''[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
+
+
+def add_auto_state(line: str, state: str) -> str:
+    """コメント本文を変えず、コメント直前へオート状態を追加する。"""
+    comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
+    comment_start = min(comment_positions) if comment_positions else len(line)
+    head = line[:comment_start]
+    comment = line[comment_start:]
+    if f"🅰️{state}" in head:
+        return line
+    auto_note = re.search(r'''["「『]オート["」』]''', head)
+    suffix = "　" if comment else ""
+    if auto_note:
+        head = head[: auto_note.start()].rstrip(" \t　") + f"🅰️{state}　" + head[auto_note.start():]
+    else:
+        head = head.rstrip(" \t　") + f"🅰️{state}" + suffix
+    return head + comment
+
+
+def add_auto_operations(text: str) -> str:
+    """オート記法の直前をON、直後をOFFにする。コメントは保持する。"""
+    lines = text.splitlines()
+    character_names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
+    auto_indexes = [
+        index for index, event in enumerate(events) if event.name and auto_note_in_line(lines[index])
+    ]
+    groups: list[list[int]] = []
+    for index in auto_indexes:
+        previous = next(
+            (candidate for candidate in range(index - 1, -1, -1) if events[candidate].name),
+            None,
+        )
+        if groups and previous == groups[-1][-1]:
+            groups[-1].append(index)
+        else:
+            groups.append([index])
+    for group in groups:
+        previous = next(
+            (candidate for candidate in range(group[0] - 1, -1, -1) if events[candidate].name),
+            None,
+        )
+        if previous is not None:
+            lines[previous] = add_auto_state(lines[previous], "ON")
+        lines[group[-1]] = add_auto_state(lines[group[-1]], "OFF")
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def add_operations(
     text: str,
     initial: str = "-----",
@@ -81,7 +137,7 @@ def add_operations(
     # 再計算すると同じマスクの重複や、手動UB直後の意図しない変更が
     # 混入するため、再計算は明示的な --ignore-original-set の場合だけ行う。
     if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
-        return ensure_initial_operation(text, initial)
+        return add_auto_operations(ensure_initial_operation(text, initial))
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     character_numbers = dict(CHAR_NUMBERS)
@@ -554,42 +610,6 @@ def add_operations(
         if event.name in character_numbers:
             rendered[index] = render_event(event, masks.get(index))
 
-    def add_auto_state(line: str, state: str) -> str:
-        """UB条件メモの前後へオート状態だけを追加する。"""
-        if f"🅰️{state}" in line:
-            return line
-        head, separator, comment = line.partition("//")
-        auto_note = re.search(r'''["「『]オート["」』]''', head)
-        if auto_note:
-            head = (
-                head[: auto_note.start()].rstrip(" \t　")
-                + f"🅰️{state}　"
-                + head[auto_note.start():]
-            )
-        else:
-            trailing = re.search(r"[ \t　]*$", head).group(0)
-            head = head[: len(head) - len(trailing)] + f"🅰️{state}" + trailing
-        return head + (separator + comment if separator else "")
-
-    # 引用符付き「オート」は操作表記へ変換せず、UB条件区間の前後へ
-    # オート状態を付ける。区間内のメモ本文は原文のまま保持する。
-    auto_indexes = [
-        index
-        for index, event in enumerate(events)
-        if event.name and re.search(r'''["「『]オート["」』]''', lines[index])
-    ]
-    groups: list[list[int]] = []
-    for index in auto_indexes:
-        if groups and index == groups[-1][-1] + 1:
-            groups[-1].append(index)
-        else:
-            groups.append([index])
-    for group in groups:
-        previous = previous_event(group[0])
-        if previous is not None:
-            rendered[previous] = add_auto_state(rendered[previous], "ON")
-        rendered[group[-1]] = add_auto_state(rendered[group[-1]], "OFF")
-
     output: list[str] = []
     for index, line in enumerate(rendered):
         output.append(line)
@@ -614,7 +634,9 @@ def add_operations(
                 f"行{index + 1}: {kind} {mask} / {reasons}"
             )
 
-    return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
+    return add_auto_operations(
+        "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
+    )
 
 
 def main() -> None:
