@@ -392,7 +392,7 @@ class TlProcessingTests(unittest.TestCase):
 
     def test_auto_off_is_inserted_at_the_top(self) -> None:
         result = add_operations("⭐️0:10　アオイ\n")
-        self.assertTrue(result.startswith("[-----]🅰️OFF\n\n"))
+        self.assertEqual(result, "⭐️0:10　アオイ\n")
 
     def test_formation_header_precedes_auto_off(self) -> None:
         text = "[(5)ユキノ|(4)ティア|(3)ミソラ|(2)ソノ|(1)イサナミ]\n⭐️0:10　ユキノ\n"
@@ -444,7 +444,14 @@ class TlProcessingTests(unittest.TestCase):
     def test_unknown_character_without_formation_does_not_crash(self) -> None:
         text = "0:50　グレイス\n"
         result = add_operations(format_text(text))
-        self.assertEqual(result, "[-----]🅰️OFF\n\n" + text)
+        self.assertEqual(result, text)
+
+    def test_unknown_order_keeps_auto_only_without_set(self) -> None:
+        text = "1:00　グレイス\n0:59　スミレ　　''オート\n"
+        result = add_operations(format_text(text))
+        self.assertNotIn("[", result)
+        self.assertIn("🅰️ON", result)
+        self.assertIn("🅰️OFF　''オート", result)
 
     def test_auto_comment_turns_on_before_and_off_after(self) -> None:
         text = (

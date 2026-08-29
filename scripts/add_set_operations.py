@@ -12,7 +12,6 @@ from dataclasses import replace
 from pathlib import Path
 
 from tl_common import (
-    CHAR_NUMBERS,
     TIME_TOKEN_RE,
     mask_for,
     numbers_from_mask,
@@ -149,9 +148,11 @@ def refine_character_set_operations(
     if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
         return ensure_initial_operation(text, initial)
     character_names = character_names_from_formation(text)
+    if not character_names:
+        # 番号が確定できない場合はSETを推測せず、オートだけ反映する。
+        return add_auto_operations(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
-    character_numbers = dict(CHAR_NUMBERS)
-    character_numbers.update(character_names)
+    character_numbers = dict(character_names)
     for line in lines:
         for match in re.finditer(r"\(([54321])\)([^|)\]]+)", line):
             character_numbers[match.group(2).strip()] = match.group(1)

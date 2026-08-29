@@ -8,14 +8,13 @@ import re
 import sys
 from pathlib import Path
 
-from tl_common import CHAR_NUMBERS, MASK_RE, character_names_from_formation, numbers_from_mask, parse_event
+from tl_common import MASK_RE, character_names_from_formation, numbers_from_mask, parse_event
 
 
 def validate(text: str) -> list[str]:
     errors: list[str] = []
     character_names = character_names_from_formation(text)
-    character_numbers = dict(CHAR_NUMBERS)
-    character_numbers.update(character_names)
+    character_numbers = dict(character_names)
     for line in text.splitlines():
         for match in re.finditer(r"\(([54321])\)([^|)\]]+)", line):
             character_numbers[match.group(2).strip()] = match.group(1)
