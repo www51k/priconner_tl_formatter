@@ -70,6 +70,19 @@ def ensure_initial_operation(text: str, initial: str = "-----") -> str:
     return "\n".join(lines)
 
 
+def add_explicit_comment_auto_on(text: str) -> str:
+    """``''オート``という明示指示へ、同じ行のONを付ける。"""
+    rendered: list[str] = []
+    for line in text.splitlines():
+        head, separator, comment = line.partition("''")
+        if separator and re.match(r"[ \t　]*オート(?:[ \t　]|$)", comment):
+            if "🅰️ON" not in head:
+                head = head.rstrip(" \t　") + "🅰️ON　"
+            line = head + separator + comment
+        rendered.append(line)
+    return "\n".join(rendered) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def add_operations(
     text: str,
     initial: str = "-----",
@@ -81,7 +94,7 @@ def add_operations(
     # 再計算すると同じマスクの重複や、手動UB直後の意図しない変更が
     # 混入するため、再計算は明示的な --ignore-original-set の場合だけ行う。
     if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
-        return ensure_initial_operation(text, initial)
+        return add_explicit_comment_auto_on(ensure_initial_operation(text, initial))
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     character_numbers = dict(CHAR_NUMBERS)
@@ -595,6 +608,8 @@ def add_operations(
         output.append(line)
         if index in standalone_after:
             output.append(standalone_after[index])
+
+    output = [add_explicit_comment_auto_on(line).rstrip("\n") for line in output]
 
     # 後半の自動解除（🅰️OFF）が存在しても、先頭の初期SETとは別物。
     # 開始SETが原文にない場合は必ず先頭へ追加する。
