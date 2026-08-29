@@ -13,7 +13,7 @@ const reviewContent = document.querySelector("#review-content");
 const formationList = document.querySelector("#formation-list");
 const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
-const FORMATION_CACHE_KEY = "tl-formatter.formation.v1";
+const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
 let draggedSlot = null;
