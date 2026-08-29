@@ -19,6 +19,7 @@ from tl_common import (
     character_names_from_formation,
     render_event,
     MASK_RE,
+    DISPLAY_NAMES,
 )
 
 
@@ -79,7 +80,7 @@ def auto_note_in_line(line: str) -> bool:
     return bool(re.match(r"''[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
 
 
-def add_auto_state(line: str, state: str) -> str:
+def add_auto_state(line: str, state: str, character_name: str | None = None) -> str:
     """コメント本文を変えず、コメント直前へオート状態を追加する。"""
     comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
     comment_start = min(comment_positions) if comment_positions else len(line)
@@ -88,15 +89,14 @@ def add_auto_state(line: str, state: str) -> str:
     if f"🅰️{state}" in head:
         return line
     auto_note = re.search(r'''["「『]オート["」』]''', head)
-    before_state = (
-        ""
-        if MASK_RE.search(head)
-        else "　　"
-        if comment.startswith("''")
-        else "　"
-        if comment
-        else ""
-    )
+    if MASK_RE.search(head):
+        before_state = ""
+    elif character_name:
+        display_name = DISPLAY_NAMES.get(character_name, character_name)
+        # キャラ名は4文字幅にそろえ、その後ろに区切りを1つ置く。
+        before_state = "　" * (max(0, 4 - len(display_name)) + 1)
+    else:
+        before_state = "　　" if comment.startswith("''") else "　" if comment else ""
     after_state = "　" if comment else ""
     if auto_note:
         head = head[: auto_note.start()].rstrip(" \t　") + f"🅰️{state}　" + head[auto_note.start():]
@@ -139,8 +139,8 @@ def add_auto_operations(text: str) -> str:
             None,
         )
         if previous is not None:
-            lines[previous] = add_auto_state(lines[previous], "ON")
-        lines[group[-1]] = add_auto_state(lines[group[-1]], "OFF")
+            lines[previous] = add_auto_state(lines[previous], "ON", events[previous].name)
+        lines[group[-1]] = add_auto_state(lines[group[-1]], "OFF", events[group[-1]].name)
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 

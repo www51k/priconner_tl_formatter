@@ -134,6 +134,15 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("[5--2-]🅰️ON　//チャレンジTP起動", result)
         self.assertIn('ネラ🅰️OFF　"オート"', result)
 
+    def test_auto_state_keeps_character_field_width_without_set(self) -> None:
+        text = (
+            "0:26　アオイ\n"
+            "0:18　すみれ　　''オート\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("0:26　アオイ　　🅰️ON", result)
+        self.assertIn("0:18　すみれ　　🅰️OFF　''オート", result)
+
     def test_single_quote_between_set_and_auto_is_removed(self) -> None:
         self.assertEqual(
             format_text("1:30　バトル開始　[54---]'🅰️OFF\n"),
