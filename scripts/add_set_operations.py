@@ -126,7 +126,7 @@ def add_auto_operations(text: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
-def add_operations(
+def refine_character_set_operations(
     text: str,
     initial: str = "-----",
     report: list[str] | None = None,
@@ -137,7 +137,7 @@ def add_operations(
     # 再計算すると同じマスクの重複や、手動UB直後の意図しない変更が
     # 混入するため、再計算は明示的な --ignore-original-set の場合だけ行う。
     if not ignore_original_set and any(MASK_RE.search(line) for line in lines):
-        return add_auto_operations(ensure_initial_operation(text, initial))
+        return ensure_initial_operation(text, initial)
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
     character_numbers = dict(CHAR_NUMBERS)
@@ -634,9 +634,24 @@ def add_operations(
                 f"行{index + 1}: {kind} {mask} / {reasons}"
             )
 
-    return add_auto_operations(
-        "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
+    return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def add_operations(
+    text: str,
+    initial: str = "-----",
+    report: list[str] | None = None,
+    ignore_original_set: bool = False,
+) -> str:
+    """キャラ別SET精査後に、オートだけを反映する処理パイプライン。"""
+    character_refined = refine_character_set_operations(
+        text,
+        initial=initial,
+        report=report,
+        ignore_original_set=ignore_original_set,
     )
+    # 次段階の全体SET最適化は、ここへ追加する。オート処理はSETマスクを変更しない。
+    return add_auto_operations(character_refined)
 
 
 def main() -> None:

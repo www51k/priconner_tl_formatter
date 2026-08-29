@@ -10,7 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from add_set_operations import add_operations  # noqa: E402
+from add_set_operations import (  # noqa: E402
+    add_operations,
+    refine_character_set_operations,
+)
 from format_tl import format_text  # noqa: E402
 from tl_common import character_names_from_formation  # noqa: E402
 from validate_tl import validate  # noqa: E402
@@ -453,6 +456,12 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("0:20　グレイス　[54321]🅰️ON", result)
         self.assertIn("0:18　スミレ🅰️OFF　''オート", result)
+
+    def test_auto_is_a_separate_phase_after_character_set_refinement(self) -> None:
+        text = "[-----]🅰️OFF\n0:20　グレイス　[54321]\n0:18　スミレ　　''オート\n"
+        refined = refine_character_set_operations(text)
+        self.assertNotIn("🅰️ON", refined)
+        self.assertIn("🅰️ON", add_operations(text))
 
     def test_untimed_following_events_are_rendered_as_arrows(self) -> None:
         text = (
