@@ -1,4 +1,4 @@
-name: Deploy TL Formatter
+name: Deploy priconner_tl_formatter
 
 on:
   push:

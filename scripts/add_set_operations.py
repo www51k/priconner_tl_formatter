@@ -77,6 +77,8 @@ def auto_note_in_line(line: str) -> bool:
     head = line[:comment_start]
     if re.search(r'''["「『]オート["」』]''', head):
         return True
+    if re.search(r"(?:^|[ \t　])(?:#?オート|[（(]オート[）)])(?:$|[ \t　])", head):
+        return True
     return bool(re.match(r"''[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
 
 
@@ -86,8 +88,12 @@ def add_auto_state(line: str, state: str, character_name: str | None = None) -> 
     comment_start = min(comment_positions) if comment_positions else len(line)
     head = line[:comment_start]
     comment = line[comment_start:]
-    if f"🅰️{state}" in head:
-        return line
+    existing_state = re.search(r"🅰️(?:ON|OFF)", head)
+    if existing_state:
+        if existing_state.group(0) == f"🅰️{state}":
+            return line
+        head = head[:existing_state.start()] + f"🅰️{state}" + head[existing_state.end():]
+        return head + comment
     auto_note = re.search(r'''["「『]オート["」』]''', head)
     if MASK_RE.search(head):
         before_state = ""
@@ -106,14 +112,41 @@ def add_auto_state(line: str, state: str, character_name: str | None = None) -> 
 
 
 def add_auto_operations(text: str) -> str:
-    """オート記法の直前をON、直後をOFFにする。コメントは保持する。"""
+    """オート記法を状態へ反映する。
+
+    オート記法があっても、そのUB対象が直前のSET状態に含まれる場合は
+    SETを優先し、オート区間を作らない。SETとオートを独立に付与すると、
+    同じUBへ二つの発動条件を重ねてしまうため、SET後状態を先に走査する。
+    """
     lines = text.splitlines()
     character_names = character_names_from_formation(text)
     events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
+
+    set_state: set[str] = set()
+    effective_auto_indexes: list[int] = []
+    for index, event in enumerate(events):
+        mask_match = MASK_RE.search(lines[index])
+        if not event.name or event.name == "ボス":
+            if mask_match:
+                set_state = numbers_from_mask(mask_match.group(1))
+            continue
+        number = character_names.get(event.name)
+        auto_requested = auto_note_in_line(lines[index])
+        # 手動UBはオート区間へ入れない。SET対象ならSETを優先し、
+        # オート記法は説明として残すがON/OFF操作は生成しない。
+        if (
+            auto_requested
+            and not event.manual
+            and (number is None or number not in set_state)
+        ):
+            effective_auto_indexes.append(index)
+        if mask_match:
+            set_state = numbers_from_mask(mask_match.group(1))
+
     auto_indexes = [
         index
         for index, event in enumerate(events)
-        if event.name and event.name != "ボス" and auto_note_in_line(lines[index])
+        if index in set(effective_auto_indexes)
     ]
     groups: list[list[int]] = []
     for index in auto_indexes:
@@ -138,9 +171,94 @@ def add_auto_operations(text: str) -> str:
             ),
             None,
         )
+        if previous is None:
+            previous = next(
+                (
+                    candidate
+                    for candidate in range(group[0] - 1, -1, -1)
+                    if re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", lines[candidate])
+                ),
+                None,
+            )
         if previous is not None:
             lines[previous] = add_auto_state(lines[previous], "ON", events[previous].name)
         lines[group[-1]] = add_auto_state(lines[group[-1]], "OFF", events[group[-1]].name)
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
+def compact_forward_set_operations(text: str) -> str:
+    """正順で包含関係にある生成SETを、UB条件を保って集約する。
+
+    逆順解析で得たマスク列を、正順に見直す。後のマスクが前のマスクを
+    包含し、追加されるキャラがその間に手動・矢印・オート発動しない場合、
+    後のマスクを前へ移して中間操作を省略できる。原本SETは呼び出し側で
+    除外するため、投稿者指定のマスクは変更しない。
+    """
+    lines = text.splitlines()
+    character_names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, character_names) for line_no, line in enumerate(lines, 1)]
+
+    def mask_indexes() -> list[int]:
+        return [
+            index
+            for index, line in enumerate(lines)
+            if (
+                MASK_RE.search(line)
+                and not line.lstrip().startswith("[(")
+                and "🅰️" not in line
+            )
+        ]
+
+    def event_number(event, number: str) -> bool:
+        return character_names.get(event.name) == number
+
+    changed = True
+    while changed:
+        changed = False
+        indexes = mask_indexes()
+        for left, right in zip(indexes, indexes[1:]):
+            left_match = MASK_RE.search(lines[left])
+            right_match = MASK_RE.search(lines[right])
+            if not left_match or not right_match:
+                continue
+            left_state = numbers_from_mask(left_match.group(1))
+            right_state = numbers_from_mask(right_match.group(1))
+            added = right_state - left_state
+            if not added:
+                continue
+
+            safe = True
+            for index in range(left + 1, right + 1):
+                event = events[index]
+                for number in added:
+                    if not event_number(event, number):
+                        continue
+                    # 追加対象の最初の発動が通常SETなら、前倒ししても
+                    # そのUB条件を満たす。手動・矢印・オートは個別条件を
+                    # 持つため、まとめず元の境界を残す。
+                    if (
+                        event.manual
+                        or event.arrow
+                        or auto_note_in_line(lines[index])
+                        or index != right
+                    ):
+                        safe = False
+                        break
+                if not safe:
+                    break
+            if not safe:
+                continue
+
+            # 後の絶対マスクを前の位置へ移し、後のマスクだけを除去する。
+            lines[left] = MASK_RE.sub(right_match.group(0), lines[left], count=1)
+            if lines[right].strip().startswith("[") and MASK_RE.fullmatch(lines[right].strip()):
+                lines.pop(right)
+                events.pop(right)
+            else:
+                lines[right] = MASK_RE.sub("", lines[right], count=1)
+                events[right] = parse_event(right + 1, lines[right], character_names)
+            changed = True
+            break
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
@@ -223,7 +341,7 @@ def refine_character_set_operations(
     # そのキャラだけを開始SETへ追加する。以後の特殊判断は自動推測しない。
     if not explicit_start:
         first_event = events[first_event_index] if first_event_index < len(events) else None
-        if first_event and first_event.name and not first_event.star and not first_event.arrow:
+        if first_event and first_event.name and not first_event.manual and not first_event.arrow:
             first_number = character_numbers.get(first_event.name)
             if first_number is not None:
                 effective_initial = mask_for({first_number})[1:-1]
@@ -245,7 +363,7 @@ def refine_character_set_operations(
         if event.name not in character_numbers:
             continue
         number = character_numbers[event.name]
-        if event.star:
+        if event.manual:
             character_constraints[number]["manual"].append(index)
         elif event.arrow:
             character_constraints[number]["arrow"].append(index)
@@ -272,7 +390,7 @@ def refine_character_set_operations(
         future_normal_timed = False
         for index in reversed(indexes):
             event = events[index]
-            kind = "manual" if event.star else "arrow" if event.arrow else "normal"
+            kind = "manual" if event.manual else "arrow" if event.arrow else "normal"
             character_decisions[number][index] = {
                 "kind": kind,
                 "next_index": next_index,
@@ -286,7 +404,7 @@ def refine_character_set_operations(
             next_kind = kind
             if event.arrow:
                 future_arrow = True
-            elif not event.star and event_seconds(event) is not None:
+            elif not event.manual and event_seconds(event) is not None:
                 future_normal_timed = True
 
     # キャラ別の制約から、手動UBの解除位置を先に確定する。
@@ -340,7 +458,7 @@ def refine_character_set_operations(
         previous = previous_event(index)
         if previous is not None and masks.get(previous) == mask:
             return
-        if events[index].star:
+        if events[index].manual:
             standalone_after[index] = mask
             masks[index] = None
         else:
@@ -440,7 +558,7 @@ def refine_character_set_operations(
 
         # 同時刻の⭐️矢印は表示上の矢印を残すが、SET計算では手動UB。
         # 矢印として扱うと、手動対象をSET内へ戻すことがある。
-        if event.star and event.arrow:
+        if event.manual and event.arrow:
             event = replace(event, arrow=False)
 
         active_early_exclusions.update(early_exclusions_by_start.get(index, set()))
@@ -458,7 +576,7 @@ def refine_character_set_operations(
 
         # stateは、現在行の発動直前の状態として扱う。
         before = set(state)
-        if event.star:
+        if event.manual:
             # ⭐️手動UB対象は発動直前までにSET外へする。
             state.discard(number)
         else:
@@ -473,7 +591,7 @@ def refine_character_set_operations(
                 if events[arrow_index].name
             }
             state.difference_update(future_numbers)
-            if not event.star:
+            if not event.manual:
                 state.add(number)
 
         # 直前行のSET状態を変更すれば、現在行の発動前に反映できる。
@@ -537,7 +655,7 @@ def refine_character_set_operations(
             # 発動後もSETを継続する。矢印先の先行SETとは区別する。
             if (
                 not event.arrow
-                and not event.star
+                and not event.manual
                 and character_decisions[number][index]["future_normal_timed"]
             ):
                 state.add(number)
@@ -557,7 +675,7 @@ def refine_character_set_operations(
             else:
                 state.discard(number)
             next_event = next_character(index)
-            if next_event is not None and not next_event.star:
+            if next_event is not None and not next_event.manual:
                 state.add(character_numbers[next_event.name])
 
         # 明確な解除理由がないキャラは、次の予定がなくてもSETを継続する。
@@ -566,13 +684,13 @@ def refine_character_set_operations(
         # 連鎖中に毎行解除すると、同じ連鎖のSET操作が細切れになる。
         if not arrow_chain_continues:
             state.difference_update(active_early_exclusions)
-        if event.star:
+        if event.manual:
             state.difference_update(deferred_arrow_releases)
             deferred_arrow_releases.clear()
         active_early_exclusions.difference_update(
             early_exclusions_by_end.get(index, set())
         )
-        if event.star:
+        if event.manual:
             # 手動UB後、次の操作が通常の⭐️なし発動なら、
             # 次の同キャラ発動へ向けて対象を直後から再SETする。
             # 全体の次行ではなく、キャラ別の次回種別を使う。
@@ -582,18 +700,18 @@ def refine_character_set_operations(
         # 次の操作が通常の⭐️なし発動なら、その対象の準備を現在の操作へ便乗する。
         # 次の操作が⭐️または矢印の場合は、誤発防止のため個別に扱う。
         next_event = next_operation(index)
-        if next_event is not None and not next_event.star and not next_event.arrow:
+        if next_event is not None and not next_event.manual and not next_event.arrow:
             state.add(character_numbers[next_event.name])
 
         changed_mask = mask_for(state) if state != before_action else None
         operation_kinds[index] = classify_operation(before_action, state)
         reason_parts: list[str] = []
-        if event.star:
+        if event.manual:
             reason_parts.append("手動UB")
         if chain or delayed_chain:
             reason_parts.append("矢印連鎖")
         next_event = next_operation(index)
-        if next_event is not None and not next_event.star and not next_event.arrow:
+        if next_event is not None and not next_event.manual and not next_event.arrow:
             reason_parts.append(f"次の通常発動{next_event.name}へ便乗")
         if active_early_exclusions:
             reason_parts.append("手動対象の誤発防止")
@@ -605,7 +723,7 @@ def refine_character_set_operations(
             masks[index] = mask_for(state)
             operation_kinds[index] = "REPLACE"
             continue
-        if event.star and changed_mask is not None:
+        if event.manual and changed_mask is not None:
             # 手動行は情報量が多いため、SET操作を次行先頭の独立行へ分離する。
             standalone_after[index] = changed_mask
             masks[index] = None
@@ -615,7 +733,7 @@ def refine_character_set_operations(
     # 同時刻の⭐️矢印は、直前の矢印行で対象キャラをSET外にしておく。
     # 表示上は⭐️を残すが、手動UBの誤発防止を優先する。
     for index, event in enumerate(events):
-        if not event.star or not event.arrow:
+        if not event.manual or not event.arrow:
             continue
         previous = previous_event(index)
         number = character_numbers.get(event.name)
@@ -664,13 +782,15 @@ def add_operations(
     ignore_original_set: bool = False,
 ) -> str:
     """キャラ別SET精査後に、オートだけを反映する処理パイプライン。"""
+    source_has_set = any(MASK_RE.search(line) for line in text.splitlines())
     character_refined = refine_character_set_operations(
         text,
         initial=initial,
         report=report,
         ignore_original_set=ignore_original_set,
     )
-    # 次段階の全体SET最適化は、ここへ追加する。オート処理はSETマスクを変更しない。
+    if not source_has_set and not ignore_original_set:
+        character_refined = compact_forward_set_operations(character_refined)
     return add_auto_operations(character_refined)
 
 

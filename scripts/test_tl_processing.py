@@ -12,10 +12,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from add_set_operations import (  # noqa: E402
     add_operations,
+    compact_forward_set_operations,
     refine_character_set_operations,
 )
 from format_tl import format_text  # noqa: E402
-from tl_common import character_names_from_formation  # noqa: E402
+from tl_common import character_names_from_formation, parse_event  # noqa: E402
 from validate_tl import validate  # noqa: E402
 from review_tl import collect_review_items  # noqa: E402
 
@@ -131,8 +132,9 @@ class TlProcessingTests(unittest.TestCase):
             "⇒ネラ　\"オート\"\n"
         )
         result = add_operations(format_text(text))
-        self.assertIn("[5--2-]🅰️ON　//チャレンジTP起動", result)
-        self.assertIn('ネラ🅰️OFF　"オート"', result)
+        self.assertNotIn("🅰️ON", result)
+        self.assertEqual(result.count("🅰️OFF"), 1)
+        self.assertIn('"オート"', result)
 
     def test_auto_state_keeps_character_field_width_without_set(self) -> None:
         text = (
@@ -465,20 +467,110 @@ class TlProcessingTests(unittest.TestCase):
     def test_auto_comment_turns_on_before_and_off_after(self) -> None:
         text = (
             "[-----]🅰️OFF\n"
-            "0:20　グレイス　[54321]\n"
+            "0:20　グレイス　[5----]\n"
             "0:19　ボス\n"
             "0:18　スミレ　　''オート\n"
-            "0:16　グレイス　[54321]\n"
+            "0:16　グレイス　[5----]\n"
         )
         result = add_operations(format_text(text))
-        self.assertIn("0:20　グレイス　[54321]🅰️ON", result)
+        self.assertIn("0:20　グレイス　[5----]🅰️ON", result)
         self.assertIn("0:18　スミレ　　🅰️OFF　''オート", result)
 
     def test_auto_is_a_separate_phase_after_character_set_refinement(self) -> None:
-        text = "[-----]🅰️OFF\n0:20　グレイス　[54321]\n0:18　スミレ　　''オート\n"
+        text = "[-----]🅰️OFF\n0:20　グレイス　[5----]\n0:18　スミレ　　''オート\n"
         refined = refine_character_set_operations(text)
         self.assertNotIn("🅰️ON", refined)
         self.assertIn("🅰️ON", add_operations(text))
+
+    def test_hash_comment_is_not_manual_but_unmarked_action_is_candidate(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:20　アオイ　通常cl\n"
+            "0:19　ネラ　#通常cl\n"
+        )
+        formatted = format_text(text)
+        names = character_names_from_formation(formatted)
+        events = [parse_event(i, line, names) for i, line in enumerate(formatted.splitlines(), 1)]
+        self.assertTrue(events[1].manual_hint)
+        self.assertFalse(events[2].manual_hint)
+        result = add_operations(formatted)
+        self.assertNotIn("0:20　アオイ　　[", result)
+        self.assertNotIn("🅰️ON", result)
+
+    def test_comment_only_lines_are_not_manual_hints(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:20　アオイ　#通常cl\n"
+            "0:19　ネラ　//通常cl\n"
+        )
+        names = character_names_from_formation(text)
+        events = [parse_event(i, line, names) for i, line in enumerate(text.splitlines(), 1)]
+        self.assertFalse(events[1].manual_hint)
+        self.assertFalse(events[2].manual_hint)
+
+    def test_set_has_priority_over_auto_annotation(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "[54---]🅰️OFF\n"
+            "0:20　アオイ　[54---]\n"
+            "0:19　ネラ　（オート）\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertNotIn("0:19　ネラ　　🅰️ON", result)
+        self.assertNotIn("0:19　ネラ　　🅰️OFF", result)
+        self.assertIn("（オート）", result)
+
+    def test_forward_compaction_keeps_last_superset_at_first_safe_ub(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:30　アオイ　#通常cl\n"
+            "0:29　ネラ　#通常cl\n"
+            "0:28　ツムギ　#通常cl\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("0:30　アオイ　　[543--]　#通常cl", result)
+        self.assertNotIn("0:29　ネラ　　　 [", result)
+        self.assertNotIn("0:29　ネラ　　　[", result)
+
+    def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:20　アオイ　'通常cl\n"
+            "0:19　ネラ　\"オート\"\n"
+            "0:18　ツムギ　''手動確認\n"
+        )
+        names = character_names_from_formation(text)
+        events = [parse_event(i, line, names) for i, line in enumerate(text.splitlines(), 1)]
+        self.assertTrue(events[1].manual_hint)
+        self.assertFalse(events[2].manual_hint)
+        self.assertTrue(events[3].manual_hint)
+
+    def test_auto_word_is_auto_operation_but_hash_comment_is_not_manual(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "[5----]🅰️OFF\n"
+            "0:19　ネラ　オート\n"
+            "0:18　ツムギ　#メモ\n"
+        )
+        formatted = format_text(text)
+        names = character_names_from_formation(formatted)
+        events = [parse_event(i, line, names) for i, line in enumerate(formatted.splitlines(), 1)]
+        self.assertFalse(events[1].manual_hint)
+        self.assertFalse(events[2].manual_hint)
+        self.assertFalse(events[3].manual_hint)
+        result = add_operations(formatted)
+        self.assertIn("🅰️ON", result)
+        self.assertIn("🅰️OFF", result)
+
+    def test_explicit_set_overrides_manual_candidate_hint(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "0:20　アオイ　通常cl　[5----]\n"
+        )
+        names = character_names_from_formation(text)
+        event = parse_event(2, text.splitlines()[1], names)
+        self.assertFalse(event.manual_hint)
+        self.assertFalse(event.manual)
 
     def test_five_body_characters_get_numbers_without_formation(self) -> None:
         text = (

@@ -165,6 +165,12 @@ class Event:
     star: bool
     arrow: bool
     mask: str | None
+    manual_hint: bool = False
+
+    @property
+    def manual(self) -> bool:
+        """SET計算上、手動発動として扱うべきかを返す。"""
+        return self.star or self.manual_hint
 
 
 def tl_declarations(text: str) -> list[tuple[str, str]]:
@@ -402,7 +408,34 @@ def parse_event(
     if name in {"開始時", "開始", "バトル開始", "止めぽ"}:
         name = None
 
-    return Event(line_no, line, prefix, name, star, arrow, mask)
+    manual_hint = False
+    if name is not None and mask is None:
+        # ``#`` や ``//`` は単なるコメントであり、それだけでは手動
+        # 要素にしない。通常のキャラ行はSET対象とし、直後の `'` / `''`
+        # だけを手動候補として扱う。
+        name_end = line.find(name) + len(name)
+        suffix = line[name_end:]
+        suffix_stripped = suffix.strip(" \t　")
+        structural_suffix = re.split(r"//|''", suffix, maxsplit=1)[0]
+        structural_suffix = structural_suffix.strip(" \t　")
+        is_quoted_auto_note = bool(
+            re.fullmatch(r"[\"‘’“”「」『』']*オート[\"‘’“”「」『』']*", suffix_stripped)
+        )
+        is_auto_note = bool(
+            re.fullmatch(r"(?:#?オート|[（(]オート[）)])", structural_suffix)
+        )
+        is_auto_marker = bool(re.fullmatch(r"🅰️(?:ON|OFF)", structural_suffix))
+        comment_only = suffix_stripped.startswith(("#", "//"))
+        if (
+            not comment_only
+            and not is_quoted_auto_note
+            and not is_auto_note
+            and not is_auto_marker
+            and (suffix_stripped.startswith("'") or structural_suffix)
+        ):
+            manual_hint = True
+
+    return Event(line_no, line, prefix, name, star, arrow, mask, manual_hint)
 
 
 def render_event(
