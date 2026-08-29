@@ -122,21 +122,28 @@ function autofillFormation(source) {
   });
 }
 
+function isSetNotationLine(line) {
+  // # / // / '' はコメント・注記なので、SET判定へ含めない。
+  const structural = line.split(/#|\/\/|''/, 1)[0];
+  const normalized = structural
+    .replaceAll("⭕️", "O")
+    .replaceAll("❌", "X")
+    .replaceAll("〇", "O");
+  return /^\s*\[[54321-]{5}\]/.test(normalized)
+    || /[〇○◯⭕OXx0０×❌＿_－ー-]{5}/.test(normalized);
+}
+
 function diagnoseTL(source) {
   if (!source.trim()) {
     diagnosis.textContent = "TLを貼り付けると、自動判定します";
     formationPanel.hidden = true;
     return;
   }
-  const nonEmptyLines = source.split("\n").map((line) => line.trim()).filter(Boolean);
-  const hasSetOperation = nonEmptyLines.slice(1).some((line) => {
-    const normalized = line
-      .replaceAll("⭕️", "O")
-      .replaceAll("❌", "X")
-      .replaceAll("〇", "O");
-    return /^\[[54321-]{5}\]/.test(line)
-      || /[〇○◯⭕OXx0０×❌＿_－ー-]{5}/.test(normalized);
-  });
+  const lines = source.split("\n");
+  const headerIndex = lines.findIndex((line) => /^\s*\[\(5\)/.test(line));
+  const hasSetOperation = lines.some((line, index) =>
+    index !== headerIndex && isSetNotationLine(line)
+  );
   if (hasSetOperation) {
     diagnosis.innerHTML = "判定：<strong>セミオ扱い</strong>（SET操作あり。SET操作は不要として扱います）";
     formationPanel.hidden = true;
@@ -198,7 +205,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260830-auto-spacing-2`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260830-set-priority-3`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
