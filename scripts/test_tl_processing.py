@@ -675,6 +675,12 @@ class TlProcessingTests(unittest.TestCase):
             "0:09　シェフィ\n",
         )
 
+    def test_removes_source_blank_lines_inside_same_ten_second_bucket(self) -> None:
+        text = "1:09　ワカナ\n\n⭐️1:06　シェフィ　''通常cl\n\n1:04　シェフィ\n"
+        formatted = format_text(text)
+        self.assertNotIn("ワカナ\n\n⭐️1:06", formatted)
+        self.assertNotIn("''通常cl\n\n1:04", formatted)
+
     def test_preserves_mask_content_but_moves_manual_mask_to_next_line(self) -> None:
         text = (
             "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"

@@ -65,6 +65,35 @@ def remove_redundant_auto_operations(lines: list[str]) -> list[str]:
     return result
 
 
+def remove_same_bucket_empty_lines(lines: list[str]) -> list[str]:
+    """10秒区切りでない、原文由来の余分な空行を除去する。"""
+    result: list[str] = []
+    for index, line in enumerate(lines):
+        if line.strip():
+            result.append(line)
+            continue
+        previous_time: int | None = None
+        for previous in reversed(lines[:index]):
+            match = TIME_TOKEN_RE.search(previous)
+            if match:
+                previous_time = int(match.group(1)) * 60 + int(match.group(2))
+                break
+        next_time: int | None = None
+        for following in lines[index + 1 :]:
+            match = TIME_TOKEN_RE.search(following)
+            if match:
+                next_time = int(match.group(1)) * 60 + int(match.group(2))
+                break
+        if (
+            previous_time is not None
+            and next_time is not None
+            and previous_time // 10 == next_time // 10
+        ):
+            continue
+        result.append(line)
+    return result
+
+
 def format_text(text: str) -> str:
     output: list[str] = []
     character_names = character_names_from_formation(text)
@@ -231,6 +260,7 @@ def format_text(text: str) -> str:
             previous_event_seconds = None
             output.append(line.rstrip("\r"))
     output = remove_redundant_auto_operations(output)
+    output = remove_same_bucket_empty_lines(output)
     return "\n".join(output) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
