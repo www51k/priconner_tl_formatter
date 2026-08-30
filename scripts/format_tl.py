@@ -123,10 +123,7 @@ def shift_tl_times(text: str, carryover_seconds: int = 90) -> str:
         if match.group(3) is None:
             return start
         # ``1:04-03`` は同じ1分内の04秒から03秒を表す。
-        end_second = match.group(3)
-        if len(end_second) == 1:
-            end_second = str((int(match.group(2)) // 10) * 10 + int(end_second))
-        end = shift(match.group(1), end_second)
+        end = shift(match.group(1), match.group(3))
         return f"{start}-{end.split(':', 1)[1]}"
 
     def replace_full_range(match: re.Match[str]) -> str:
