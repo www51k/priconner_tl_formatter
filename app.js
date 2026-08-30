@@ -115,6 +115,20 @@ function pickCharacters(source) {
 }
 
 function autofillFormation(source) {
+  const formationLine = source.split("\n").find((line) => /\(5\)[^|\]]+\|/.test(line) && /\(1\)[^|\]]+\]/.test(line));
+  if (formationLine) {
+    const parsed = [...formationLine.matchAll(/\(([54321])\)([^|\]]+)/g)]
+      .map((match) => ({ number: Number(match[1]), name: match[2].trim() }))
+      .filter(({ name }) => name);
+    if (parsed.length === 5) {
+      const byNumber = new Map(parsed.map(({ number, name }) => [number, name]));
+      [...formationList.querySelectorAll("input")].forEach((field, index) => {
+        field.value = byNumber.get(5 - index) || "";
+      });
+      formationTouched = true;
+      return;
+    }
+  }
   if (formationTouched) return;
   const names = pickCharacters(source);
   [...formationList.querySelectorAll("input")].forEach((field, index) => {
