@@ -98,6 +98,11 @@ class TlProcessingTests(unittest.TestCase):
         expected = "\n--------------------\n\n0:00　アオイ\n-0:02　ネラ\n"
         self.assertEqual(shift_tl_times(source, 70), expected)
 
+    def test_negative_carryover_lines_are_not_parsed_as_character_names(self) -> None:
+        source = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n\n0:18　アオイ\n"
+        result = format_text(source, carryover_seconds=21)
+        self.assertIn("--------------------\n\n-0:51　アオイ", result)
+
     def test_carryover_shifts_bare_seconds(self) -> None:
         self.assertEqual(shift_tl_times("53　アオイ\n", 60), "0:23　アオイ\n")
 

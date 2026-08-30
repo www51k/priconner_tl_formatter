@@ -332,6 +332,10 @@ def parse_event(
 ) -> Event:
     mask_match = MASK_RE.search(line)
     mask = mask_match.group(1) if mask_match else None
+    # 持ち越し補正で0秒未満になった行は表示用の範囲外行であり、
+    # ``-0:03``をキャラ名として誤認しない。
+    if re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*-\d+:\d{1,2}", line):
+        return Event(line_no, line, "", None, False, False, mask)
     if not is_event_line(line):
         return Event(line_no, line, "", None, False, False, mask)
 
