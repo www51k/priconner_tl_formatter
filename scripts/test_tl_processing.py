@@ -70,6 +70,13 @@ class TlProcessingTests(unittest.TestCase):
         ]) + "\n"
         self.assertEqual(shift_tl_times(source, 89), expected)
 
+    def test_starred_full_range_keeps_time_and_character_together(self) -> None:
+        source = "☆1:19-18　タコ　ライジングTP早め\n"
+        self.assertEqual(
+            format_text(source),
+            "⭐️1:19-18　タコ　''ライジングTP早め\n",
+        )
+
     def test_carryover_puts_zero_or_less_below_separator(self) -> None:
         source = "0:20　アオイ\n0:18　ネラ\n"
         expected = "\n--------------------\n\n0:00　アオイ\n-0:02　ネラ\n"
