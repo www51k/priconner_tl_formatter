@@ -13,11 +13,18 @@ const reviewContent = document.querySelector("#review-content");
 const formationList = document.querySelector("#formation-list");
 const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
+const carryoverTime = document.querySelector("#carryover-time");
+const carryoverTimeValue = document.querySelector("#carryover-time-value");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
 let draggedSlot = null;
 let formationTouched = false;
+
+carryoverTime.addEventListener("input", () => {
+  carryoverTimeValue.value = carryoverTime.value;
+  carryoverTimeValue.textContent = carryoverTime.value;
+});
 
 function saveFormationCache() {
   try {
@@ -221,7 +228,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260830-set-priority-3`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260830-carryover-1`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -256,9 +263,10 @@ async function formatTL() {
     const sourceWithFormation = applyFormation(source, header);
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", sourceWithFormation);
+    pyodide.globals.set("carryover_seconds", Number(carryoverTime.value));
     const result = await pyodide.runPythonAsync(`
 import json
-formatted = format_text(source_text)
+formatted = format_text(source_text, carryover_seconds=carryover_seconds)
 report = []
 set_text = add_operations(formatted, report=report)
 errors = validate(set_text)

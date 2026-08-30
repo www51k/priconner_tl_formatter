@@ -42,6 +42,12 @@
           <button id="clear-input" class="button ghost" type="button">クリア</button>
         </div>
         <textarea id="input" spellcheck="false" placeholder="ここにTLを貼り付けてください"></textarea>
+        <div class="carryover-control">
+          <label for="carryover-time">持ち越し残時間</label>
+          <div class="carryover-value"><output id="carryover-time-value" for="carryover-time">90</output>秒</div>
+          <input id="carryover-time" type="range" min="21" max="90" step="1" value="90" aria-describedby="carryover-help">
+          <div id="carryover-help" class="hint">通常戦は90秒。持ち越し時は選択した残り秒数に合わせてTL時刻を補正します。</div>
+        </div>
         <div class="actions">
           <button id="format" class="button primary" type="button">整形する</button>
           <span id="status" class="status" role="status">準備中...</span>

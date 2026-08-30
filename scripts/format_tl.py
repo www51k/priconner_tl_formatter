@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from tl_common import (
+    BARE_TIME_TOKEN_RE,
     DISPLAY_NAMES,
     MASK_RE,
     TIME_RE,
@@ -72,6 +73,12 @@ def remove_same_bucket_empty_lines(lines: list[str]) -> list[str]:
         if line.strip():
             result.append(line)
             continue
+        if (
+            (index > 0 and lines[index - 1].strip() == "--------------------")
+            or (index + 1 < len(lines) and lines[index + 1].strip() == "--------------------")
+        ):
+            result.append(line)
+            continue
         previous_time: int | None = None
         for previous in reversed(lines[:index]):
             match = TIME_TOKEN_RE.search(previous)
@@ -94,7 +101,93 @@ def remove_same_bucket_empty_lines(lines: list[str]) -> list[str]:
     return result
 
 
-def format_text(text: str) -> str:
+def shift_tl_times(text: str, carryover_seconds: int = 90) -> str:
+    """構造部の時刻を持ち越し残時間に合わせて減算する。"""
+    try:
+        remaining = int(carryover_seconds)
+    except (TypeError, ValueError):
+        remaining = 90
+    remaining = max(21, min(90, remaining))
+    offset = 90 - remaining
+    if offset == 0:
+        return text
+
+    def replace_time(match: re.Match[str]) -> str:
+        def shift(minute: str, second: str) -> str:
+            total = int(minute) * 60 + int(second) - offset
+            sign = "-" if total < 0 else ""
+            total = abs(total)
+            return f"{sign}{total // 60}:{total % 60:02d}"
+
+        start = shift(match.group(1), match.group(2))
+        if match.group(3) is None:
+            return start
+        # ``1:04-03`` は同じ1分内の04秒から03秒を表す。
+        end_second = match.group(3)
+        if len(end_second) == 1:
+            end_second = str((int(match.group(2)) // 10) * 10 + int(end_second))
+        end = shift(match.group(1), end_second)
+        return f"{start}-{end.split(':', 1)[1]}"
+
+    def replace_full_range(match: re.Match[str]) -> str:
+        start_total = int(match.group(1)) * 60 + int(match.group(2)) - offset
+        end_total = int(match.group(3)) * 60 + int(match.group(4)) - offset
+
+        def render(total: int) -> str:
+            sign = "-" if total < 0 else ""
+            total = abs(total)
+            return f"{sign}{total // 60}:{total % 60:02d}"
+
+        start = render(start_total)
+        end = render(end_total)
+        # 既存のTL表示に合わせ、同じ分の範囲は終了側を秒だけにする。
+        if start_total >= 0 and end_total >= 0 and start_total // 60 == end_total // 60:
+            return f"{start}-{end.split(':', 1)[1]}"
+        return f"{start}-{end}"
+
+    shifted_lines = []
+    separator_inserted = False
+    for line in text.splitlines(keepends=True):
+        line_body = line.rstrip("\r\n")
+        newline = line[len(line_body):]
+        comment_positions = [pos for pos in (line_body.find("//"), line_body.find("''")) if pos >= 0]
+        comment_start = min(comment_positions) if comment_positions else len(line_body)
+        head, comment = line_body[:comment_start], line_body[comment_start:]
+        line_below_zero = False
+        full_range = re.search(r"(?<!\d)(\d+):(\d{1,2})-(\d+):(\d{1,2})(?!\d)", head)
+        if full_range:
+            line_below_zero = int(full_range.group(1)) * 60 + int(full_range.group(2)) - offset <= 0
+            head = re.sub(
+                r"(?<!\d)(\d+):(\d{1,2})-(\d+):(\d{1,2})(?!\d)",
+                replace_full_range,
+                head,
+                count=1,
+            )
+        elif TIME_TOKEN_RE.search(head):
+            time_match = TIME_TOKEN_RE.search(head)
+            line_below_zero = int(time_match.group(1)) * 60 + int(time_match.group(2)) - offset <= 0
+            head = TIME_TOKEN_RE.sub(replace_time, head, count=1)
+        else:
+            bare_time = BARE_TIME_TOKEN_RE.match(head)
+            if bare_time:
+                total = int(bare_time.group(2)) - offset
+                line_below_zero = total <= 0
+                sign = "-" if total < 0 else ""
+                total = abs(total)
+                head = f"{bare_time.group(1)}{sign}{total // 60}:{total % 60:02d}" + head[bare_time.end():]
+        if line_below_zero and not separator_inserted:
+            if shifted_lines and not shifted_lines[-1].endswith("\n"):
+                shifted_lines.append("\n")
+            shifted_lines.append("\n")
+            shifted_lines.append("--------------------\n")
+            shifted_lines.append("\n")
+            separator_inserted = True
+        shifted_lines.append(head + comment + newline)
+    return "".join(shifted_lines)
+
+
+def format_text(text: str, carryover_seconds: int = 90) -> str:
+    text = shift_tl_times(text, carryover_seconds)
     output: list[str] = []
     character_names = character_names_from_formation(text)
     display_names = DISPLAY_NAMES | display_names_from_tl_declarations(text)
@@ -108,6 +201,11 @@ def format_text(text: str) -> str:
     for source_line in text.splitlines():
         # 投稿由来の区切り記号だけの行は、整形結果には残さない。
         if re.fullmatch(r"\\+", source_line.strip()):
+            continue
+        # 持ち越しで0秒以下になった範囲の区切り線は、5連続ハイフンが
+        # SETマスクとして解釈されないよう、そのまま保持する。
+        if source_line.strip() == "--------------------":
+            normalized_lines.append(source_line)
             continue
         normalized = normalize_input_line(source_line)
         normalized_lines.extend(split_inline_character_arrow(normalized))

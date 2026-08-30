@@ -15,7 +15,7 @@ from add_set_operations import (  # noqa: E402
     compact_forward_set_operations,
     refine_character_set_operations,
 )
-from format_tl import format_text  # noqa: E402
+from format_tl import format_text, shift_tl_times  # noqa: E402
 from tl_common import character_names_from_formation, parse_event  # noqa: E402
 from validate_tl import validate  # noqa: E402
 from review_tl import collect_review_items  # noqa: E402
@@ -24,6 +24,57 @@ from review_tl import collect_review_items  # noqa: E402
 class TlProcessingTests(unittest.TestCase):
     reference_source = ROOT / "tl" / "source" / "202608_1b58000_16.org"
     reference_output = ROOT / "tl" / "generated" / "202608_1b58000_16.txt"
+
+    def test_carryover_default_keeps_original_times(self) -> None:
+        source = "1:20　アオイ　// 1:20のメモ\n"
+        self.assertEqual(shift_tl_times(source), source)
+
+    def test_carryover_shifts_ranges_and_preserves_comments(self) -> None:
+        source = "1:20　アオイ　// 1:20のメモ\n1:04-1:03　ネラ\n"
+        expected = "0:50　アオイ　// 1:20のメモ\n0:34-33　ネラ\n"
+        self.assertEqual(shift_tl_times(source, 60), expected)
+
+    def test_carryover_accepts_short_and_full_range_forms(self) -> None:
+        source = "\n".join([
+            "1:19　アオイ",
+            "1:19-1:18　アオイ",
+            "1:19-18　アオイ",
+            "1:19-8　アオイ",
+            "1:19-08　アオイ",
+            "1:18　アオイ",
+        ]) + "\n"
+        expected = "\n".join([
+            "1:18　アオイ",
+            "1:18-17　アオイ",
+            "1:18-17　アオイ",
+            "1:18-17　アオイ",
+            "1:18-07　アオイ",
+            "1:17　アオイ",
+        ]) + "\n"
+        self.assertEqual(shift_tl_times(source, 89), expected)
+
+    def test_carryover_accepts_zero_minute_range_forms(self) -> None:
+        source = "\n".join([
+            "0:11-10　アオイ",
+            "0:11-09　アオイ",
+            "0:11-0:9　アオイ",
+            "0:11-0:09　アオイ",
+        ]) + "\n"
+        expected = "\n".join([
+            "0:10-09　アオイ",
+            "0:10-08　アオイ",
+            "0:10-08　アオイ",
+            "0:10-08　アオイ",
+        ]) + "\n"
+        self.assertEqual(shift_tl_times(source, 89), expected)
+
+    def test_carryover_puts_zero_or_less_below_separator(self) -> None:
+        source = "0:20　アオイ\n0:18　ネラ\n"
+        expected = "\n--------------------\n\n0:00　アオイ\n-0:02　ネラ\n"
+        self.assertEqual(shift_tl_times(source, 70), expected)
+
+    def test_carryover_shifts_bare_seconds(self) -> None:
+        self.assertEqual(shift_tl_times("53　アオイ\n", 60), "0:23　アオイ\n")
 
     @unittest.skipUnless(
         reference_source.exists() and reference_output.exists(),

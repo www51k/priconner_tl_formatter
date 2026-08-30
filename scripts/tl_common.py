@@ -288,12 +288,26 @@ def normalize_time_prefix(prefix: str) -> str:
             raise ValueError(f"分は0または1の一桁で指定してください: {match.group(0)}")
         second = match.group(2).zfill(2)
         end = match.group(3)
+        if end is not None and len(end) == 1:
+            end = str((int(match.group(2)) // 10) * 10 + int(end))
         return f"{minute}:{second}" + (f"-{end.zfill(2)}" if end is not None else "")
 
+    def shorten_full_range(match: re.Match[str]) -> str:
+        start_minute, end_minute = match.group(1), match.group(3)
+        if int(start_minute) != int(end_minute):
+            return match.group(0)
+        return f"{match.group(1)}:{match.group(2)}-{match.group(4)}"
+
+    normalized = re.sub(
+        r"(\d{1,2}):(\d{1,2})[ \t　]*[〜~～－ー―‐—–-][ \t　]*(\d{1,2}):(\d{1,2})(?=\D|$)",
+        shorten_full_range,
+        prefix,
+        count=1,
+    )
     normalized = re.sub(
         r"(\d{1,2}:\d{1,2})[ \t　]*[〜~～－ー―‐—–-][ \t　]*(\d{1,2})(?=\D|$)",
         r"\1-\2",
-        prefix,
+        normalized,
         count=1,
     )
     normalized = TIME_TOKEN_RE.sub(replace, normalized, count=1)
