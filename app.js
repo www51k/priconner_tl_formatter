@@ -15,6 +15,7 @@ const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
 const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
+const preserveSetOperations = document.querySelector("#preserve-set-operations");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -232,7 +233,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260830-carryover-3`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260830-carryover-4`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -268,11 +269,12 @@ async function formatTL() {
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", sourceWithFormation);
     pyodide.globals.set("carryover_seconds", Number(carryoverTime.value));
+    pyodide.globals.set("preserve_set_operations", preserveSetOperations.checked);
     const result = await pyodide.runPythonAsync(`
 import json
 formatted = format_text(source_text, carryover_seconds=carryover_seconds)
 report = []
-set_text = add_operations(formatted, report=report)
+set_text = formatted if preserve_set_operations else add_operations(formatted, report=report)
 errors = validate(set_text)
 review_items = collect_review_items(set_text, formatted)
 error_details = []
@@ -283,7 +285,7 @@ for error in errors:
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    output.textContent = ensureInitialSet(data.text);
+    output.textContent = preserveSetOperations.checked ? data.text : ensureInitialSet(data.text);
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
