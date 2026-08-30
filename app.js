@@ -178,8 +178,10 @@ function diagnoseTL(source) {
 
 function formationHeader() {
   const names = [...formationList.querySelectorAll("input")].map((field) => field.value.trim());
-  if (names.some((name) => !name)) throw new Error("編成の5人すべてにキャラ名を入力してください");
-  if (new Set(names).size !== names.length) throw new Error("編成内のキャラ名が重複しています");
+  const filled = names.filter(Boolean);
+  if (!filled.length) return null;
+  if (new Set(filled).size !== filled.length) throw new Error("編成内のキャラ名が重複しています");
+  if (filled.length !== names.length) return null;
   return `[${names.map((name, index) => `(${5 - index})${name}`).join("|")}]`;
 }
 
