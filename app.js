@@ -35,7 +35,9 @@ function restoreFormationCache() {
     [...formationList.querySelectorAll("input")].forEach((field, index) => {
       field.value = typeof names[index] === "string" ? names[index] : "";
     });
-    formationTouched = names.some((name) => name.trim());
+    // 保存済み編成は初期値。新しいTLを貼り付けた際は、本文から抽出した
+    // 編成で更新できるよう、ユーザー編集済みとは扱わない。
+    formationTouched = false;
   } catch (_) {
     // 保存データが壊れていても、空の編成欄から開始する。
   }
