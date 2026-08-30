@@ -680,6 +680,22 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("0:39　シェフィ　[5-3-1]", result)
 
+    def test_existing_initial_set_is_not_replaced_by_first_normal_ub(self) -> None:
+        text = (
+            "[(5)アネモネ|(4)クリア|(3)リリ|(2)サレン|(1)ユニ]\n"
+            "[-----]🅰️OFF\n"
+            "\n"
+            "　1:21　アネモネ\n"
+            "⭐️1:20　クリア　　''ピアースcl早め　UBダメ全桁貼り+*1桁くらい*\n"
+            "[54-2-]🅰️ON\n"
+            "　　　→　リリ\n"
+            "　　　→　サレン\n"
+        )
+        result = add_operations(format_text(text))
+        self.assertIn("[-----]🅰️OFF", result)
+        self.assertIn("[54-2-]🅰️ON", result)
+        self.assertNotIn("[5----]🅰️OFF", result)
+
     def test_explicit_set_does_not_trigger_the_next_arrow_target_early(self) -> None:
         text = (
             "[(5)ワカナ|(4)シェフィ|(3)フブキ|(2)グレイス|(1)すみれ]\n"
@@ -701,7 +717,7 @@ class TlProcessingTests(unittest.TestCase):
         )
         result = add_operations(format_text(text))
         lines = result.splitlines()
-        self.assertIn("[5432-]🅰️ON", lines[1])
+        self.assertIn("[54321]🅰️ON", lines[1])
         auto_line = next(line for line in lines if "0:40　A" in line)
         self.assertIn("🅰️OFF", auto_line)
         self.assertNotIn("🅰️ON", auto_line)

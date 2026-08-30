@@ -105,6 +105,55 @@ def ensure_initial_set_spacing(lines: list[str]) -> list[str]:
     return result
 
 
+def preserve_original_initial_set(text: str, original_text: str) -> str:
+    """本文冒頭にある原本の独立SETを、後段補正から保護する。"""
+    standalone = re.compile(r"\s*\[([54321-]{5})\](?:🅰️(?:ON|OFF))?\s*")
+    original_lines = original_text.splitlines()
+    header_index = next(
+        (index for index, line in enumerate(original_lines)
+         if line.startswith("[(") and "|" in line),
+        -1,
+    )
+    first_event_index = next(
+        (
+            index for index, line in enumerate(original_lines)
+            if TIME_TOKEN_RE.search(line)
+            or re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒)", line)
+        ),
+        len(original_lines),
+    )
+    original_initial = next(
+        (
+            match.group(1)
+            for line in original_lines[header_index + 1:first_event_index]
+            if (match := standalone.fullmatch(line))
+        ),
+        None,
+    )
+    if original_initial is None:
+        return text
+
+    lines = text.splitlines()
+    result_header_index = next(
+        (index for index, line in enumerate(lines)
+         if line.startswith("[(") and "|" in line),
+        -1,
+    )
+    result_first_event_index = next(
+        (
+            index for index, line in enumerate(lines)
+            if TIME_TOKEN_RE.search(line)
+            or re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒)", line)
+        ),
+        len(lines),
+    )
+    for index in range(result_header_index + 1, result_first_event_index):
+        if standalone.fullmatch(lines[index]):
+            lines[index] = MASK_RE.sub(f"[{original_initial}]", lines[index], count=1)
+            break
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def add_auto_state(line: str, state: str, character_name: str | None = None) -> str:
     """コメント本文を変えず、コメント直前へオート状態を追加する。"""
     comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
@@ -1144,7 +1193,10 @@ def add_operations(
     # SET済み原本でも、矢印元のマスクに対象が残ると手前で暴発するため。
     character_refined = ensure_arrow_successor_masks(character_refined)
     character_refined = ensure_next_normal_targets_are_set(character_refined)
-    return plan_auto_transitions(character_refined)
+    result = plan_auto_transitions(character_refined)
+    if source_has_set and not ignore_original_set:
+        result = preserve_original_initial_set(result, text)
+    return result
 
 
 def main() -> None:
