@@ -485,6 +485,11 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertTrue(result.startswith("[(5)ティア|(4)尻|(3)ちぇる|(2)猫|(1)波レ]\n\n[-----]🅰️OFF"))
 
+    def test_existing_initial_set_gets_spacing_before_first_event(self) -> None:
+        text = "[-----]🅰️OFF\n⭐️1:19　タコ　　''ライジングTP早め\n"
+        result = add_operations(text)
+        self.assertIn("[-----]🅰️OFF\n\n⭐️1:19　タコ", result)
+
     def test_redundant_auto_off_is_removed_but_set_is_kept(self) -> None:
         result = format_text(
             "[✕〇✕✕✕]off\n"

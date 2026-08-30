@@ -51,7 +51,8 @@ def ensure_initial_operation(text: str, initial: str = "-----") -> str:
     search_start = header_index + 1 if header_index >= 0 else 0
     for line in lines[search_start:first_event_index]:
         if re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", line):
-            return text
+            spaced = ensure_initial_set_spacing(lines)
+            return "\n".join(spaced) + ("\n" if text.endswith(("\n", "\r")) else "")
 
     # 時刻付きの「バトル開始 [.....]」や、ヘッダーなしの先頭SETは原本を維持。
     first_nonempty = next((index for index, line in enumerate(lines) if line.strip()), None)
@@ -80,6 +81,28 @@ def auto_note_in_line(line: str) -> bool:
     if re.search(r"(?:^|[ \t　])(?:#?オート|[（(]オート[）)])(?:$|[ \t　])", head):
         return True
     return bool(re.match(r"''[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
+
+
+def ensure_initial_set_spacing(lines: list[str]) -> list[str]:
+    """先頭の開始SETと最初の本文の間に空行を確保する。"""
+    result = list(lines)
+    header_index = next(
+        (index for index, line in enumerate(result) if line.startswith("[(") and "|" in line),
+        -1,
+    )
+    start = header_index + 1 if header_index >= 0 else 0
+    initial_index = next(
+        (
+            index for index in range(start, len(result))
+            if re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", result[index])
+        ),
+        None,
+    )
+    if initial_index is not None and (
+        initial_index + 1 >= len(result) or result[initial_index + 1].strip()
+    ):
+        result.insert(initial_index + 1, "")
+    return result
 
 
 def add_auto_state(line: str, state: str, character_name: str | None = None) -> str:
@@ -1082,6 +1105,8 @@ def refine_character_set_operations(
             output = output[:1] + ["", f"[{effective_initial}]🅰️OFF", ""] + output[1:]
         else:
             output = [f"[{effective_initial}]🅰️OFF", "", ""] + output
+
+    output = ensure_initial_set_spacing(output)
 
     if report is not None:
         for index, kind in operation_kinds.items():
