@@ -190,7 +190,7 @@ function formationHeader() {
 function applyFormation(source, header) {
   if (!header) return source;
   const lines = source.split("\n");
-  if (lines[0]?.trim().startsWith("[") && (lines[0].includes("(5)") || /\[[54321O〇○◯X×－ー＿-]{5}\]/.test(lines[0]))) {
+  if (lines[0]?.trim().startsWith("[") && (lines[0].includes("(5)") || /\[[O〇○◯X×－ー＿-]{5}\]/.test(lines[0]))) {
     lines.shift();
   }
   return `${header}\n${lines.join("\n")}`;
@@ -232,7 +232,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260830-carryover-4`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260830-carryover-5`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
