@@ -105,6 +105,7 @@ function pickCharacters(source) {
     const line = rawLine.split("//", 1)[0]
       .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*/, "")
       .replace(/^(?:\d{1,2}:\d{1,2}(?:[-〜~](?:\d{1,2}:)?\d{1,2})?|\d{1,2})\s*/, "")
+      .replace(/^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)\s*/, "")
       .replace(/^(?:→|➡︎|⇨|⇒|->|>)\s*/, "");
     if (!line || line.startsWith("[") || line.startsWith("【")) continue;
     if (/^(?:タゲ|ターゲット)/.test(line) || /^(?:[ABC]\s*\/\s*)+[ABC]$/.test(line)) continue;
