@@ -140,8 +140,9 @@ function autofillFormation(source) {
   }
   if (formationTouched) return;
   const names = pickCharacters(source);
+  const start = 5 - names.length;
   [...formationList.querySelectorAll("input")].forEach((field, index) => {
-    field.value = names[index] || "";
+    field.value = index >= start ? names[index - start] : "";
   });
 }
 
