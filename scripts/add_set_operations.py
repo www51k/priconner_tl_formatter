@@ -62,7 +62,7 @@ def ensure_initial_operation(text: str, initial: str = "-----") -> str:
         ):
             return text
 
-    insertion = ["", f"[{initial}]🅰️OFF", ""] if header_index >= 0 else [f"[{initial}]🅰️OFF", ""]
+    insertion = ["", f"[{initial}]🅰️OFF", "", ""] if header_index >= 0 else [f"[{initial}]🅰️OFF", "", ""]
     if header_index >= 0:
         lines[header_index + 1:header_index + 1] = insertion
     else:
@@ -1079,9 +1079,9 @@ def refine_character_set_operations(
     # 開始SETが原文にない場合は必ず先頭へ追加する。
     if not explicit_start:
         if output and output[0].startswith("[(") and "|" in output[0]:
-            output = output[:1] + ["", f"[{effective_initial}]🅰️OFF"] + output[1:]
+            output = output[:1] + ["", f"[{effective_initial}]🅰️OFF", ""] + output[1:]
         else:
-            output = [f"[{effective_initial}]🅰️OFF", ""] + output
+            output = [f"[{effective_initial}]🅰️OFF", "", ""] + output
 
     if report is not None:
         for index, kind in operation_kinds.items():
