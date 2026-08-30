@@ -362,6 +362,12 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
             previous_event_was_star = False
             previous_event_was_indented = False
             previous_event_seconds = None
+            if (
+                re.fullmatch(r"\s*\[[54321-]{5}\]\s*", line)
+                and output
+                and output[-1].strip() == line.strip()
+            ):
+                continue
             output.append(line.rstrip("\r"))
     output = remove_redundant_auto_operations(output)
     output = remove_same_bucket_empty_lines(output)

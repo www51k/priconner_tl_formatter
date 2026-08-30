@@ -84,6 +84,15 @@ class TlProcessingTests(unittest.TestCase):
             "⭐️0:27　ペコ　''サンライズ後、アオイUB後すぐ、26でも間に合う\n",
         )
 
+    def test_inline_star_set_is_not_duplicated_by_following_same_set_line(self) -> None:
+        source = (
+            "0:27 ☆ペコ　[54321] サンライズ後、アオイUB後すぐ、26でも間に合う\n"
+            "[54321]\n"
+        )
+        result = format_text(source)
+        self.assertEqual(result.count("[54321]"), 1)
+        self.assertIn("⭐️0:27　ペコ", result)
+
     def test_carryover_puts_zero_or_less_below_separator(self) -> None:
         source = "0:20　アオイ\n0:18　ネラ\n"
         expected = "\n--------------------\n\n0:00　アオイ\n-0:02　ネラ\n"
