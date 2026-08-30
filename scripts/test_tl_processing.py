@@ -77,6 +77,13 @@ class TlProcessingTests(unittest.TestCase):
             "⭐️1:19-18　タコ　''ライジングTP早め\n",
         )
 
+    def test_single_apostrophe_manual_note_gets_star_and_double_apostrophe(self) -> None:
+        source = "0:27 ペコ　'サンライズ後、アオイUB後すぐ、26でも間に合う\n"
+        self.assertEqual(
+            format_text(source),
+            "⭐️0:27　ペコ　''サンライズ後、アオイUB後すぐ、26でも間に合う\n",
+        )
+
     def test_carryover_puts_zero_or_less_below_separator(self) -> None:
         source = "0:20　アオイ\n0:18　ネラ\n"
         expected = "\n--------------------\n\n0:00　アオイ\n-0:02　ネラ\n"

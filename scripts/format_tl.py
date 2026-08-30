@@ -223,6 +223,13 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
     previous_time_bucket: int | None = None
     for line_no, line in enumerate(normalized_lines, 1):
         event = parse_event(line_no, line, character_names)
+        # キャラ名直後の単独アポストロフィは手動UBの注記なので、
+        # 時刻後の☆表記と同じ⭐️手動UB表示へ統一する。
+        if event.manual_hint and not event.star and event.name:
+            name_end = line.find(event.name) + len(event.name)
+            suffix = line[name_end:].lstrip(" \t　")
+            if suffix.startswith("'") and not suffix.startswith("''"):
+                event = replace(event, prefix=f"⭐️{event.prefix}", star=True)
         # 「1:30 開始 [54--1] 🅰️OFF」のような開始時設定は、開始行を
         # 残すとSET操作が埋もれるため、SET→オートの順で先頭へ出す。
         # コメント本文（//以降）はそのまま保持する。
@@ -311,6 +318,8 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
                     name_end = name_index + len(display_name)
                     tail = rendered[name_end:]
                     tail_content = tail.lstrip(" 	　")
+                    if tail_content.startswith("'") and not tail_content.startswith("''"):
+                        tail_content = tail_content[1:].lstrip(" 	　")
                     if tail_content and not tail_content.startswith(("//", "''")):
                         auto_match = re.match(r"🅰️(?:ON|OFF)", tail_content)
                         if auto_match:
