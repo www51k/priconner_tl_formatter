@@ -22,8 +22,8 @@ from review_tl import collect_review_items  # noqa: E402
 
 
 class TlProcessingTests(unittest.TestCase):
-    reference_source = ROOT / "tl" / "202608_1b58000_16.org"
-    reference_output = ROOT / "tl" / "202608_1b58000_16.txt"
+    reference_source = ROOT / "tl" / "source" / "202608_1b58000_16.org"
+    reference_output = ROOT / "tl" / "generated" / "202608_1b58000_16.txt"
 
     @unittest.skipUnless(
         reference_source.exists() and reference_output.exists(),
@@ -553,7 +553,7 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("[---2-]🅰️OFF", result)
 
     def test_hash_set_comment_is_kept_as_a_comment(self) -> None:
-        source_path = ROOT / "tl" / "202608_5b47500_6.org"
+        source_path = ROOT / "tl" / "source" / "202608_5b47500_6.org"
         if not source_path.exists():
             self.skipTest("ローカルTL fixtureがある場合だけ実行する")
         result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
@@ -565,7 +565,7 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("0:52　シェフィ　[543--]", result)
 
     def test_normal_and_arrow_ub_targets_are_both_set_before_their_sequence(self) -> None:
-        source_path = ROOT / "tl" / "202608_5b47500_6.org"
+        source_path = ROOT / "tl" / "source" / "202608_5b47500_6.org"
         if not source_path.exists():
             self.skipTest("ローカルTL fixtureがある場合だけ実行する")
         result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
@@ -578,7 +578,7 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("0:52　シェフィ　[543--]", result)
 
     def test_arrow_target_is_removed_before_the_arrow_source(self) -> None:
-        source_path = ROOT / "tl" / "202608_5b47500_6.org"
+        source_path = ROOT / "tl" / "source" / "202608_5b47500_6.org"
         if not source_path.exists():
             self.skipTest("ローカルTL fixtureがある場合だけ実行する")
         result = add_operations(format_text(source_path.read_text(encoding="utf-8")))
