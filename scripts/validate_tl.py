@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 
+from add_set_operations import auto_note_in_line
 from tl_common import MASK_RE, character_names_from_formation, numbers_from_mask, parse_event
 
 
@@ -38,9 +39,16 @@ def validate(text: str) -> list[str]:
                 previous_mask = mask
             continue
         number = character_numbers[event.name]
-        if event.star and number in state:
+        auto_event = auto_note_in_line(line)
+        if event.manual and number in state:
             errors.append(f"{line_no}: ⭐️手動対象の{event.name}がSET内にあります")
-        if not event.star and number not in state and mask is None:
+        if (
+            not event.manual
+            and not event.arrow
+            and not auto_event
+            and number not in state
+            and mask is None
+        ):
             errors.append(f"{line_no}: ⭐️なしの{event.name}がSET外です")
 
         if mask is not None:
