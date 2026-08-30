@@ -21,6 +21,11 @@ let pyodidePromise;
 let draggedSlot = null;
 let formationTouched = false;
 
+function resizeOutput() {
+  output.style.height = "auto";
+  output.style.height = `${output.scrollHeight}px`;
+}
+
 carryoverTime.addEventListener("input", () => {
   carryoverTimeValue.value = carryoverTime.value;
   carryoverTimeValue.textContent = carryoverTime.value;
@@ -280,6 +285,7 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
 `);
     const data = JSON.parse(result);
     output.value = ensureInitialSet(data.text);
+    resizeOutput();
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
@@ -309,6 +315,7 @@ input.addEventListener("input", () => {
 clearButton.addEventListener("click", () => {
   input.value = "";
   output.value = "";
+  output.style.height = "";
   copyButton.disabled = true;
   validation.hidden = true;
   review.hidden = true;
@@ -317,6 +324,7 @@ clearButton.addEventListener("click", () => {
   diagnoseTL("");
   setStatus("準備完了", "ready");
 });
+window.addEventListener("resize", resizeOutput);
 copyButton.addEventListener("click", async () => {
   await navigator.clipboard.writeText(output.value);
   copyButton.textContent = "コピーしました";
