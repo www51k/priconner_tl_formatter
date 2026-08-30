@@ -38,6 +38,8 @@ h2 { margin: 0; font-size: 1.1rem; }
 .diagnosis strong { color: var(--accent); }
 textarea { display: block; width: 100%; min-height: 270px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #0a0f15; color: var(--text); font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; outline: none; }
 textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224,179,.12); }
+.output-view { display: block; min-height: 270px; margin: 0; overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #0a0f15; color: var(--text); font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: text; }
+.output-view:empty::before { content: "整形結果がここに表示されます"; color: var(--muted); }
 .carryover-control { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(10,15,21,.7); }
 .carryover-control label { display: block; margin-bottom: 7px; font-weight: 700; }
 .carryover-value { float: right; margin-top: -29px; color: var(--accent); font: 800 1.1rem ui-monospace, monospace; }
@@ -59,4 +61,4 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .review pre { margin: 0; color: #c5d7e8; font: 13px/1.6 ui-monospace, monospace; white-space: pre-wrap; }
 footer { display: flex; justify-content: space-between; color: #68768a; font-size: .75rem; padding: 10px 4px; }
 @media (max-width: 700px) { .formation-list { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .shell { width: min(100% - 24px, 1080px); padding-top: 36px; } .panel { padding: 16px; } textarea { min-height: 230px; } footer { gap: 12px; flex-direction: column; } }
+@media (max-width: 600px) { .shell { width: min(100% - 24px, 1080px); padding-top: 36px; } .panel { padding: 16px; } textarea, .output-view { min-height: 230px; } footer { gap: 12px; flex-direction: column; } }
