@@ -186,6 +186,119 @@ def add_auto_operations(text: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
+def plan_auto_transitions(text: str) -> str:
+    """オートの前後状態を、UBの前行・終了行へ計画する。
+
+    オートUBの発動条件は前行までに確定させる。開始時は対象をSETから
+    外してON、連続オートの最後の行でOFFする。終了後の通常／手動UBへ
+    必要なSET変更は、その終了行の後状態として同じ行へまとめる。
+    """
+    lines = text.splitlines()
+    names = character_names_from_formation(text)
+    if not names:
+        return add_auto_operations(text)
+    events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
+    auto_indexes = [
+        index
+        for index, event in enumerate(events)
+        if event.name in names and auto_note_in_line(lines[index]) and not event.manual
+    ]
+    if not auto_indexes:
+        return text
+
+    def previous_event(index: int) -> int | None:
+        return next((candidate for candidate in range(index - 1, -1, -1) if events[candidate].name), None)
+
+    def next_event(index: int) -> int | None:
+        return next((candidate for candidate in range(index + 1, len(events)) if events[candidate].name), None)
+
+    def mask_index_before(index: int) -> int | None:
+        event_index = previous_event(index)
+        if event_index is not None:
+            return event_index
+        return next(
+            (
+                candidate
+                for candidate in range(index - 1, -1, -1)
+                if MASK_RE.search(lines[candidate])
+                and not lines[candidate].lstrip().startswith("[(")
+            ),
+            None,
+        )
+
+    def update_mask(index: int, state: set[str]) -> None:
+        replacement = mask_for(state)
+        if MASK_RE.search(lines[index]):
+            lines[index] = MASK_RE.sub(replacement, lines[index], count=1)
+        else:
+            lines[index] = lines[index].rstrip() + "　" + replacement
+
+    cursor = 0
+    while cursor < len(auto_indexes):
+        start = auto_indexes[cursor]
+        end = start
+        while cursor + 1 < len(auto_indexes):
+            candidate = auto_indexes[cursor + 1]
+            between = [event for event in events[end + 1 : candidate] if event.name in names]
+            if between:
+                break
+            end = candidate
+            cursor += 1
+
+        anchor = mask_index_before(start)
+        if anchor is not None:
+            match = MASK_RE.search(lines[anchor])
+            if match:
+                state = numbers_from_mask(match.group(1))
+            else:
+                previous_mask = next(
+                    (
+                        candidate
+                        for candidate in range(anchor - 1, -1, -1)
+                        if MASK_RE.search(lines[candidate])
+                        and not lines[candidate].lstrip().startswith("[(")
+                    ),
+                    None,
+                )
+                previous_match = MASK_RE.search(lines[previous_mask]) if previous_mask is not None else None
+                state = numbers_from_mask(previous_match.group(1)) if previous_match else set()
+            start_number = names[events[start].name]
+            state.discard(start_number)
+            update_mask(anchor, state)
+            lines[anchor] = add_auto_state(lines[anchor], "ON")
+        else:
+            state = set()
+
+        following = next_event(end)
+        if following is not None:
+            following_event = events[following]
+            if following_event.manual:
+                state.discard(names[following_event.name])
+            elif not following_event.arrow and not auto_note_in_line(lines[following]):
+                state.add(names[following_event.name])
+
+        if following is not None:
+            update_mask(end, state)
+        lines[end] = add_auto_state(lines[end], "OFF", events[end].name)
+        cursor += 1
+
+    # 開始条件が誤ってオート対象行へ付いた場合は、必ず直前の操作行へ戻す。
+    # これは整形済み入力・既存SET入力を再処理する場合の安全弁でもある。
+    for index in auto_indexes:
+        if "🅰️ON" not in lines[index]:
+            continue
+        previous = previous_event(index)
+        if previous is None:
+            continue
+        current_mask = MASK_RE.search(lines[index])
+        lines[index] = re.sub(r"🅰️ON", "", lines[index], count=1).strip()
+        if current_mask and not MASK_RE.search(lines[previous]):
+            lines[previous] = lines[previous].rstrip() + "　" + current_mask.group(0)
+        lines[previous] = add_auto_state(lines[previous], "ON")
+
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def compact_forward_set_operations(text: str) -> str:
     """正順で包含関係にある生成SETを、UB条件を保って集約する。
 
@@ -716,6 +829,17 @@ def refine_character_set_operations(
                 return candidate
         return None
 
+    def next_same_character_normal(index: int):
+        """キャラ別フェーズで参照してよい、同キャラの次回通常UB。"""
+        current_name = events[index].name
+        for candidate in events[index + 1 :]:
+            if candidate.name != current_name:
+                continue
+            if not candidate.manual and not candidate.arrow and not auto_note_in_line(lines[candidate.line_no - 1]):
+                return candidate
+            return None
+        return None
+
     def next_operation(index: int):
         for candidate in events[index + 1 :]:
             if candidate.name in character_numbers:
@@ -895,11 +1019,11 @@ def refine_character_set_operations(
             if character_decisions[number][index]["next_kind"] == "normal":
                 state.add(number)
 
-        # 次の操作が通常の⭐️なし発動なら、その対象の準備を現在の操作へ便乗する。
-        # 次の操作が⭐️または矢印の場合は、誤発防止のため個別に扱う。
-        next_event = next_operation(index)
-        if next_event is not None and not next_event.manual and not next_event.arrow:
-            state.add(character_numbers[next_event.name])
+        # キャラ別フェーズでは、別キャラの次回UBを先読みしない。
+        # 同キャラの次回通常UBだけを、このキャラの継続SETとして反映する。
+        next_same = next_same_character_normal(index)
+        if next_same is not None:
+            state.add(character_numbers[next_same.name])
 
         changed_mask = mask_for(state) if state != before_action else None
         operation_kinds[index] = classify_operation(before_action, state)
@@ -908,9 +1032,8 @@ def refine_character_set_operations(
             reason_parts.append("手動UB")
         if chain or delayed_chain:
             reason_parts.append("矢印連鎖")
-        next_event = next_operation(index)
-        if next_event is not None and not next_event.manual and not next_event.arrow:
-            reason_parts.append(f"次の通常発動{next_event.name}へ便乗")
+        if next_same is not None:
+            reason_parts.append(f"同キャラの次の通常発動{next_same.name}へ継続")
         if active_early_exclusions:
             reason_parts.append("手動対象の誤発防止")
         if reason_parts:
@@ -990,14 +1113,13 @@ def add_operations(
     if not source_has_set and not ignore_original_set:
         character_refined = ensure_arrow_successor_masks(character_refined)
         character_refined = compact_forward_set_operations(character_refined)
-        character_refined = apply_explicit_set_timing(character_refined)
         character_refined = ensure_arrow_targets_are_set(character_refined)
         character_refined = ensure_next_normal_targets_are_set(character_refined)
     # 生成SET・原本SETにかかわらず、矢印先の先行SETを除去する。
     # SET済み原本でも、矢印元のマスクに対象が残ると手前で暴発するため。
     character_refined = ensure_arrow_successor_masks(character_refined)
     character_refined = ensure_next_normal_targets_are_set(character_refined)
-    return add_auto_operations(character_refined)
+    return plan_auto_transitions(character_refined)
 
 
 def main() -> None:

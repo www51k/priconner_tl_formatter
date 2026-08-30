@@ -132,8 +132,8 @@ class TlProcessingTests(unittest.TestCase):
             "⇒ネラ　\"オート\"\n"
         )
         result = add_operations(format_text(text))
-        self.assertNotIn("🅰️ON", result)
-        self.assertEqual(result.count("🅰️OFF"), 1)
+        self.assertIn("🅰️ON", result)
+        self.assertGreaterEqual(result.count("🅰️OFF"), 2)
         self.assertIn('"オート"', result)
 
     def test_auto_state_keeps_character_field_width_without_set(self) -> None:
@@ -552,7 +552,7 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("[---2-]🅰️OFF", result)
 
-    def test_explicit_set_comment_is_placed_at_the_previous_boss(self) -> None:
+    def test_hash_set_comment_is_kept_as_a_comment(self) -> None:
         source_path = ROOT / "tl" / "202608_5b47500_6.org"
         if not source_path.exists():
             self.skipTest("ローカルTL fixtureがある場合だけ実行する")
@@ -560,7 +560,7 @@ class TlProcessingTests(unittest.TestCase):
         lines = result.splitlines()
         boss_line = next(line for line in lines if "0:55　ボス" in line)
         arrow_line = next(line for line in lines if "→　グレイス" in line and "0:58" not in line)
-        self.assertIn("[5----]", boss_line)
+        self.assertNotRegex(boss_line, r"\[[54321-]{5}\]")
         self.assertNotIn("[543--]", arrow_line)
         self.assertNotIn("0:52　シェフィ　[543--]", result)
 
@@ -605,6 +605,36 @@ class TlProcessingTests(unittest.TestCase):
         self.assertNotIn("[5432-]", source_line)
         self.assertNotIn("[543-2]", source_line)
         self.assertIn("→　シェフィ　[5432-]", result)
+
+    def test_auto_start_and_manual_release_are_resolved_before_the_ub(self) -> None:
+        text = (
+            "[(5)E|(4)D|(3)C|(2)B|(1)A]\n"
+            "[54321]🅰️OFF\n"
+            "0:40　A　''オート\n"
+            "⭐️0:35　E　''手動\n"
+        )
+        result = add_operations(format_text(text))
+        lines = result.splitlines()
+        self.assertIn("[5432-]🅰️ON", lines[1])
+        auto_line = next(line for line in lines if "0:40　A" in line)
+        self.assertIn("🅰️OFF", auto_line)
+        self.assertNotIn("🅰️ON", auto_line)
+        self.assertIn("[-432-]", auto_line)
+
+    def test_auto_after_arrow_is_started_on_the_arrow_post_state(self) -> None:
+        text = (
+            "[(5)E|(4)D|(3)C|(2)B|(1)A]\n"
+            "[54321]🅰️OFF\n"
+            "0:40　E\n"
+            "　　→　C\n"
+            "0:39　C　''オート\n"
+        )
+        result = add_operations(format_text(text))
+        arrow_line = next(line for line in result.splitlines() if "→　C" in line)
+        auto_line = next(line for line in result.splitlines() if "0:39　C" in line)
+        self.assertIn("[54-21]🅰️ON", arrow_line)
+        self.assertIn("🅰️OFF", auto_line)
+        self.assertNotIn("🅰️ON", auto_line)
 
     def test_manual_apostrophe_is_candidate_but_quoted_auto_note_is_not(self) -> None:
         text = (
