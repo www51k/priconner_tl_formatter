@@ -46,8 +46,7 @@
           <label for="carryover-time">持ち越し残時間</label>
           <div class="carryover-value"><output id="carryover-time-value" for="carryover-time">90</output>秒</div>
           <input id="carryover-time" type="range" min="21" max="90" step="1" value="90" aria-describedby="carryover-help">
-          <div id="carryover-help" class="hint">通常戦は90秒。持ち越し時は選択した残り秒数に合わせてTL時刻を補正します。</div>
-          <label class="carryover-mode"><input id="preserve-set-operations" type="checkbox"> 持ち越し時はSET操作を更新しない</label>
+          <div id="carryover-help" class="hint">通常戦は90秒。90秒未満を選ぶと持ち越しとして時刻だけを補正し、SET操作は更新しません。</div>
         </div>
         <div class="actions">
           <button id="format" class="button primary" type="button">整形する</button>

@@ -15,7 +15,6 @@ const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
 const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
-const preserveSetOperations = document.querySelector("#preserve-set-operations");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -269,7 +268,7 @@ async function formatTL() {
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", sourceWithFormation);
     pyodide.globals.set("carryover_seconds", Number(carryoverTime.value));
-    pyodide.globals.set("preserve_set_operations", preserveSetOperations.checked);
+    pyodide.globals.set("preserve_set_operations", Number(carryoverTime.value) < 90);
     const result = await pyodide.runPythonAsync(`
 import json
 formatted = format_text(source_text, carryover_seconds=carryover_seconds)
@@ -285,7 +284,7 @@ for error in errors:
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    output.textContent = preserveSetOperations.checked ? data.text : ensureInitialSet(data.text);
+    output.textContent = Number(carryoverTime.value) < 90 ? data.text : ensureInitialSet(data.text);
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>

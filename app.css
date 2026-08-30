@@ -45,8 +45,6 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .carryover-value { float: right; margin-top: -29px; color: var(--accent); font: 800 1.1rem ui-monospace, monospace; }
 .carryover-control input[type="range"] { display: block; width: 100%; accent-color: var(--accent); direction: rtl; }
 .carryover-control .hint { margin-top: 7px; }
-.carryover-mode { margin-top: 12px; margin-bottom: 0 !important; font-weight: 500 !important; }
-.carryover-mode input { accent-color: var(--accent); }
 .actions { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
 .button { border: 0; border-radius: 10px; padding: 10px 17px; font: inherit; font-weight: 700; cursor: pointer; transition: transform .15s, opacity .15s, background .15s; }
 .button:hover:not(:disabled) { transform: translateY(-1px); }
