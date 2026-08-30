@@ -97,14 +97,14 @@ function pickCharacters(source) {
   const names = [];
   for (const rawLine of source.split("\n")) {
     const candidateLine = rawLine.trimStart();
-    const isTimedLine = /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?/.test(candidateLine)
+    const isTimedLine = /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*\d{1,2}:\d{1,2}(?:[-〜~](?:\d{1,2}:)?\d{1,2})?/.test(candidateLine)
       || /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*\d{1,2}(?=\s|　)/.test(candidateLine);
     const isArrowLine = /^(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*(?:→|➡︎|⇨|⇒|->|>)/.test(candidateLine);
     // 使用キャラ説明やコメント中の単語ではなく、時間行・矢印行だけから拾う。
     if (!isTimedLine && !isArrowLine) continue;
     const line = rawLine.split("//", 1)[0]
       .replace(/^\s*(?:⭐️|⭐︎|⭐|★|☆|🔺|△)?\s*/, "")
-      .replace(/^(?:\d{1,2}:\d{1,2}|\d{1,2})\s*/, "")
+      .replace(/^(?:\d{1,2}:\d{1,2}(?:[-〜~](?:\d{1,2}:)?\d{1,2})?|\d{1,2})\s*/, "")
       .replace(/^(?:→|➡︎|⇨|⇒|->|>)\s*/, "");
     if (!line || line.startsWith("[") || line.startsWith("【")) continue;
     if (/^(?:タゲ|ターゲット)/.test(line) || /^(?:[ABC]\s*\/\s*)+[ABC]$/.test(line)) continue;
