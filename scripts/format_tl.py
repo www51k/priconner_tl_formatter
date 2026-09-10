@@ -320,7 +320,10 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
                     tail_content = tail.lstrip(" 	　")
                     if tail_content.startswith("'") and not tail_content.startswith("''"):
                         tail_content = tail_content[1:].lstrip(" 	　")
-                    if tail_content and not tail_content.startswith(("//", "''")):
+                    if tail_content and tail_content.startswith(("//", "''")):
+                        if event.arrow:
+                            rendered = rendered[:name_end].rstrip(" \t　") + "　" + tail_content
+                    elif tail_content:
                         auto_match = re.match(r"🅰️(?:ON|OFF)", tail_content)
                         if auto_match:
                             operation = auto_match.group(0)

@@ -54,7 +54,10 @@ def collect_review_items(
                 "reason": "オートONの根拠を原本・実戦検証で確認します",
             })
 
-    for error in ([] if has_original_set else validate(text)):
+    # 原本SETの有無は、原本由来の操作をレビュー対象にするかどうかだけを
+    # 決める。マスク桁数や重複SETなどの機械的エラーまで抑制すると、
+    # 壊れた出力を正常扱いしてしまうため、validationは常に実行する。
+    for error in validate(text):
         line_number = int(error.split(":", 1)[0])
         items.append({
             "line": line_number,

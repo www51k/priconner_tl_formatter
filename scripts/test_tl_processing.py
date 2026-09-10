@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import sys
+import re
 import unittest
 from pathlib import Path
 
@@ -106,6 +107,49 @@ class TlProcessingTests(unittest.TestCase):
     def test_carryover_shifts_bare_seconds(self) -> None:
         self.assertEqual(shift_tl_times("53　アオイ\n", 60), "0:23　アオイ\n")
 
+    def test_carryover_mode_does_not_add_set_operations(self) -> None:
+        source = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "1:20　アオイ\n"
+            "→　ネラ\n"
+        )
+        formatted = format_text(source, carryover_seconds=60)
+        carryover_result = formatted
+        normal_result = add_operations(format_text(source, carryover_seconds=90))
+
+        self.assertEqual(carryover_result, formatted)
+        self.assertEqual(
+            re.findall(r"(?m)^\[[54321-]{5}\]", carryover_result),
+            [],
+        )
+        self.assertIn("[5----]🅰️OFF", normal_result)
+        self.assertNotEqual(carryover_result, normal_result)
+
+    def test_carryover_mode_keeps_all_original_set_lines(self) -> None:
+        source = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "[54---]🅰️OFF\n"
+            "1:20　アオイ\n"
+            "[5---1]\n"
+            "→　ネラ\n"
+        )
+        formatted = format_text(source, carryover_seconds=60)
+        carryover_result = formatted
+        normal_result = add_operations(format_text(source, carryover_seconds=60))
+
+        self.assertEqual(carryover_result, formatted)
+        self.assertIn("[54---]🅰️OFF", carryover_result)
+        self.assertIn("[5---1]", carryover_result)
+        self.assertIn("[54---]🅰️OFF", normal_result)
+
+    def test_ninety_seconds_is_normal_mode_boundary(self) -> None:
+        source = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n1:20　アオイ\n"
+        normal = add_operations(format_text(source, carryover_seconds=90))
+        carryover = format_text(source, carryover_seconds=89)
+
+        self.assertIn("[5----]🅰️OFF", normal)
+        self.assertNotIn("[5----]🅰️OFF", carryover)
+
     @unittest.skipUnless(
         reference_source.exists() and reference_output.exists(),
         "ローカルTL fixtureがある場合だけ実行する",
@@ -165,6 +209,15 @@ class TlProcessingTests(unittest.TestCase):
         kinds = {item["kind"] for item in collect_review_items(text, text)}
         self.assertEqual(kinds, set())
 
+    def test_review_queue_reports_validation_error_with_original_set(self) -> None:
+        text = (
+            "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+            "[5----]🅰️OFF\n"
+            "0:10　アオイ　[54--]\n"
+        )
+        items = collect_review_items(text, text)
+        self.assertIn("VALIDATION_ERROR", {item["kind"] for item in items})
+
     def test_review_queue_finds_added_auto_on(self) -> None:
         source = ""
         formatted = "🅰️ON\n"
@@ -177,6 +230,25 @@ class TlProcessingTests(unittest.TestCase):
         ub_items = [item for item in items if item["kind"] == "UB_REVIEW"]
         self.assertEqual(len(ub_items), 1)
         self.assertIn("SET・オート状態に関係なく", ub_items[0]["reason"])
+
+    def test_add_operations_ignores_boss_event_when_reprocessing(self) -> None:
+        text = (
+            "[(5)ティア|(4)シオリ|(3)チエル|(2)タマキ|(1)すみれ]\n"
+            "[543--]🅰️ON\n"
+            "0:29　ティア　[543--]🅰️ON\n"
+            "0:26　ボス　[-43--]🅰️OFF\n"
+        )
+        result = add_operations(text)
+        self.assertIn("0:26　ボス", result)
+        self.assertEqual(add_operations(result), result)
+
+    def test_format_star_arrow_comment_spacing_is_idempotent(self) -> None:
+        text = (
+            "[(5)ティア|(4)シオリ|(3)チエル|(2)タマキ|(1)すみれ]\n"
+            "⭐️　　→　チエル　　''うぃんどみるバフ後　\"UBダメ4桁\"\n"
+        )
+        formatted = format_text(text)
+        self.assertEqual(format_text(formatted), formatted)
 
     def test_structural_preprocessing_preserves_comments(self) -> None:
         text = (
@@ -628,6 +700,137 @@ class TlProcessingTests(unittest.TestCase):
         result = add_operations(format_text(text))
         self.assertIn("→　フブキ　　[--3--]", result)
         self.assertIn("→　グレイス　[--32-]", result)
+
+    def test_arrow_target_is_released_before_arrow_with_initial_set(self) -> None:
+        cases = {
+            "normal": ("54---", "0:10　アオイ\n→　ネラ\n", ["ネラ"]),
+            "manual": ("54---", "⭐️0:10　アオイ\n→　ネラ\n", ["ネラ"]),
+            "auto": ("54---", "0:10　アオイ　''オート\n→　ネラ\n", ["ネラ"]),
+            "explicit-set": ("54---", "0:10　アオイ　[54---]\n→　ネラ\n", ["ネラ"]),
+            "normal-chain": ("543--", "0:10　アオイ\n→　ネラ\n→　ツムギ\n", ["ネラ", "ツムギ"]),
+            "manual-chain": ("543--", "⭐️0:10　アオイ\n→　ネラ\n→　ツムギ\n", ["ネラ", "ツムギ"]),
+            "auto-chain": ("543--", "0:10　アオイ　''オート\n→　ネラ\n→　ツムギ\n", ["ネラ", "ツムギ"]),
+        }
+        header = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+        for kind, (initial, events, targets) in cases.items():
+            with self.subTest(kind=kind):
+                result = add_operations(
+                    format_text(header + f"[{initial}]🅰️OFF\n" + events)
+                )
+                lines = result.splitlines()
+                self.assertTrue(any(line.startswith(f"[{initial}]") for line in lines))
+                for target in targets:
+                    arrow_index = next(
+                        index for index, line in enumerate(lines)
+                        if f"→　{target}" in line
+                    )
+                    preceding_masks = [
+                        line for line in lines[:arrow_index]
+                        if re.search(r"\[[54321-]{5}\]", line)
+                    ]
+                    self.assertTrue(preceding_masks)
+                    target_number = {"ネラ": "4", "ツムギ": "3"}[target]
+                    self.assertNotIn(
+                        target_number,
+                        re.search(r"\[([54321-]{5})\]", preceding_masks[-1]).group(1),
+                    )
+
+    def test_arrow_target_release_matrix_with_initial_set_and_following_actions(self) -> None:
+        cases = {
+            "normal-then-normal": (
+                "54---",
+                "0:10　アオイ\n→　ネラ\n0:09　ツムギ\n",
+                [("ネラ", "4")],
+            ),
+            "manual-then-normal": (
+                "54---",
+                "⭐️0:10　アオイ\n→　ネラ\n0:09　ツムギ\n",
+                [("ネラ", "4")],
+            ),
+            "auto-then-normal": (
+                "54---",
+                "0:10　アオイ　''オート\n→　ネラ\n0:09　ツムギ\n",
+                [("ネラ", "4")],
+            ),
+            "normal-two-arrow": (
+                "543--",
+                "0:10　アオイ\n→　ネラ\n→　ツムギ\n0:09　ペコ\n",
+                [("ネラ", "4"), ("ツムギ", "3")],
+            ),
+            "manual-two-arrow": (
+                "543--",
+                "⭐️0:10　アオイ\n→　ネラ\n→　ツムギ\n0:09　ペコ\n",
+                [("ネラ", "4"), ("ツムギ", "3")],
+            ),
+            "auto-two-arrow": (
+                "543--",
+                "0:10　アオイ　''オート\n→　ネラ\n→　ツムギ\n0:09　ペコ\n",
+                [("ネラ", "4"), ("ツムギ", "3")],
+            ),
+            "explicit-set-then-arrow": (
+                "543--",
+                "0:10　アオイ　[543--]\n→　ネラ\n→　ツムギ\n",
+                [("ネラ", "4"), ("ツムギ", "3")],
+            ),
+            "stop-before-arrow": (
+                "54---",
+                "0:10　アオイ\n止めぽ\n→　ネラ\n",
+                [("ネラ", "4")],
+            ),
+        }
+        header = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+        for kind, (initial, events, arrows) in cases.items():
+            with self.subTest(kind=kind):
+                result = add_operations(
+                    format_text(header + f"[{initial}]🅰️OFF\n" + events)
+                )
+                lines = result.splitlines()
+                self.assertTrue(any(line.startswith(f"[{initial}]") for line in lines))
+                for target, target_number in arrows:
+                    arrow_index = next(
+                        index for index, line in enumerate(lines)
+                        if f"→　{target}" in line
+                    )
+                    preceding_masks = [
+                        line for line in lines[:arrow_index]
+                        if re.search(r"\[[54321-]{5}\]", line)
+                    ]
+                    self.assertTrue(preceding_masks)
+                    previous_mask = re.search(
+                        r"\[([54321-]{5})\]", preceding_masks[-1]
+                    ).group(1)
+                    self.assertNotIn(target_number, previous_mask)
+
+    def test_initial_set_is_kept_while_first_manual_set_and_auto_are_safe(self) -> None:
+        cases = {
+            "manual": "⭐️0:10　アオイ\n",
+            "set": "0:10　アオイ\n",
+            "auto": "0:10　アオイ　''オート\n",
+        }
+        header = "[(5)アオイ|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n"
+        for kind, events in cases.items():
+            with self.subTest(kind=kind):
+                result = add_operations(
+                    format_text(header + "[54---]🅰️OFF\n" + events)
+                )
+                lines = result.splitlines()
+                self.assertTrue(any(line.startswith("[54---]") for line in lines))
+                first_event_index = next(
+                    index for index, line in enumerate(lines)
+                    if re.search(r"(?:⭐️)?\d+:\d+", line) and "アオイ" in line
+                )
+                preceding_masks = [
+                    line for line in lines[:first_event_index]
+                    if re.search(r"\[[54321-]{5}\]", line)
+                ]
+                self.assertTrue(preceding_masks)
+                previous_mask = re.search(
+                    r"\[([54321-]{5})\]", preceding_masks[-1]
+                ).group(1)
+                if kind == "set":
+                    self.assertIn("5", previous_mask)
+                else:
+                    self.assertNotIn("5", previous_mask)
 
     def test_single_arrow_target_is_set_before_the_arrow(self) -> None:
         text = (

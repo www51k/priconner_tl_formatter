@@ -154,6 +154,48 @@ def preserve_original_initial_set(text: str, original_text: str) -> str:
     return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
 
 
+def ensure_first_event_set_safety(text: str) -> str:
+    """初期SETを保持したまま、最初の発動直前の状態を補正する。"""
+    lines = text.splitlines()
+    names = character_names_from_formation(text)
+    events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
+    initial_index = next(
+        (
+            index for index, line in enumerate(lines)
+            if re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", line)
+        ),
+        None,
+    )
+    if initial_index is None:
+        return text
+    first_event_index = next(
+        (index for index, event in enumerate(events) if event.name in names),
+        None,
+    )
+    if first_event_index is None:
+        return text
+    first_event = events[first_event_index]
+    number = names.get(first_event.name)
+    if number is None or first_event.arrow:
+        return text
+    initial_match = MASK_RE.search(lines[initial_index])
+    if initial_match is None:
+        return text
+    state = numbers_from_mask(initial_match.group(1))
+    before = set(state)
+    if first_event.manual or auto_note_in_line(lines[first_event_index]):
+        state.discard(number)
+    elif number not in state:
+        state.add(number)
+    if state == before:
+        return text
+    operation = f"[{mask_for(state)[1:-1]}]"
+    if auto_note_in_line(lines[first_event_index]):
+        operation += "🅰️ON"
+    lines.insert(first_event_index, operation)
+    return "\n".join(lines) + ("\n" if text.endswith(("\n", "\r")) else "")
+
+
 def add_auto_state(line: str, state: str, character_name: str | None = None) -> str:
     """コメント本文を変えず、コメント直前へオート状態を追加する。"""
     comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
@@ -344,10 +386,15 @@ def plan_auto_transitions(text: str) -> str:
         following = next_event(end)
         if following is not None:
             following_event = events[following]
-            if following_event.manual:
-                state.discard(names[following_event.name])
-            elif not following_event.arrow and not auto_note_in_line(lines[following]):
-                state.add(names[following_event.name])
+            # ボス・停止メモなど、キャラクター番号を持たないイベントは
+            # SET状態を変更しない。完成済みTLを再処理する場合にも、
+            # キャラクター専用のnamesへ誤ってアクセスしないようにする。
+            following_number = names.get(following_event.name)
+            if following_number is not None:
+                if following_event.manual:
+                    state.discard(following_number)
+                elif not following_event.arrow and not auto_note_in_line(lines[following]):
+                    state.add(following_number)
 
         if following is not None:
             update_mask(end, state)
@@ -468,21 +515,31 @@ def ensure_arrow_successor_masks(text: str) -> str:
         )
         if previous_event is not None:
             previous_match = MASK_RE.search(lines[previous_event])
-            if previous_match and current_number in numbers_from_mask(previous_match.group(1)):
-                previous_state = numbers_from_mask(previous_match.group(1)) - {current_number}
-                lines[previous_event] = MASK_RE.sub(
-                    mask_for(previous_state),
-                    lines[previous_event],
-                    count=1,
-                )
+            previous_state = (
+                numbers_from_mask(previous_match.group(1))
+                if previous_match
+                else None
+            )
+            if previous_state is None:
+                for candidate in range(previous_event - 1, -1, -1):
+                    prior_match = MASK_RE.search(lines[candidate])
+                    if prior_match and not lines[candidate].lstrip().startswith("[("):
+                        previous_state = numbers_from_mask(prior_match.group(1))
+                        break
+            if previous_state is not None and current_number in previous_state:
+                previous_state.discard(current_number)
+                replacement = mask_for(previous_state)
+                if previous_match:
+                    lines[previous_event] = MASK_RE.sub(
+                        replacement,
+                        lines[previous_event],
+                        count=1,
+                    )
+                else:
+                    lines[previous_event] = lines[previous_event].rstrip() + "　" + replacement
                 # 対象は矢印元の後、矢印先の発動時点でだけSETへ戻す。
                 current_match = MASK_RE.search(lines[index])
-                current_state = (
-                    numbers_from_mask(current_match.group(1))
-                    if current_match
-                    else previous_state
-                )
-                target_mask = mask_for(current_state | {current_number})
+                target_mask = mask_for(previous_state | {current_number})
                 if current_match:
                     lines[index] = MASK_RE.sub(target_mask, lines[index], count=1)
                 else:
@@ -1194,8 +1251,13 @@ def add_operations(
     character_refined = ensure_arrow_successor_masks(character_refined)
     character_refined = ensure_next_normal_targets_are_set(character_refined)
     result = plan_auto_transitions(character_refined)
+    # オート計画が矢印元のマスクを再構成した後にも、矢印先の
+    # 先行SET解除を最終確認する。
+    if not ignore_original_set:
+        result = ensure_arrow_successor_masks(result)
     if source_has_set and not ignore_original_set:
         result = preserve_original_initial_set(result, text)
+        result = ensure_first_event_set_safety(result)
     return result
 
 
