@@ -48,6 +48,11 @@
           <input id="carryover-time" type="range" min="21" max="90" step="1" value="90" aria-describedby="carryover-help">
           <div id="carryover-help" class="hint">通常戦は90秒。90秒未満を選ぶと持ち越しとして時刻だけを補正し、SET操作は更新しません。</div>
         </div>
+        <label class="set-operation-control">
+          <input id="add-set-operations" type="checkbox">
+          <span>SET操作追加</span>
+          <span class="hint">OFF（既定）では書式だけ整形します</span>
+        </label>
         <div class="actions">
           <button id="format" class="button primary" type="button">整形する</button>
           <span id="status" class="status" role="status">準備中...</span>

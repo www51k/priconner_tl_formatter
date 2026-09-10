@@ -15,6 +15,7 @@ const diagnosis = document.querySelector("#tl-diagnosis");
 const formationPanel = document.querySelector("#formation-panel");
 const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
+const addSetOperations = document.querySelector("#add-set-operations");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -164,6 +165,11 @@ function diagnoseTL(source) {
     formationPanel.hidden = true;
     return;
   }
+  if (!addSetOperations.checked) {
+    diagnosis.innerHTML = "判定：<strong>書式整形のみ</strong>（SET操作追加OFF）";
+    formationPanel.hidden = true;
+    return;
+  }
   const lines = source.split("\n");
   const headerIndex = lines.findIndex((line) => /^\s*\[\(5\)/.test(line));
   const hasSetOperation = lines.some((line, index) =>
@@ -263,18 +269,18 @@ async function formatTL() {
   validation.hidden = true;
   review.hidden = true;
   try {
-    const header = formationPanel.hidden ? null : formationHeader();
+    const header = addSetOperations.checked && !formationPanel.hidden ? formationHeader() : null;
     const sourceWithFormation = applyFormation(source, header);
     const pyodide = await loadPython();
     pyodide.globals.set("source_text", sourceWithFormation);
     pyodide.globals.set("carryover_seconds", Number(carryoverTime.value));
-    pyodide.globals.set("preserve_set_operations", Number(carryoverTime.value) < 90);
+    pyodide.globals.set("add_set_operations", addSetOperations.checked);
     const result = await pyodide.runPythonAsync(`
 import json
 formatted = format_text(source_text, carryover_seconds=carryover_seconds)
 report = []
-set_text = formatted if preserve_set_operations else add_operations(formatted, report=report)
-errors = validate(set_text)
+set_text = add_operations(formatted, report=report) if add_set_operations and carryover_seconds >= 90 else formatted
+errors = validate(set_text) if add_set_operations and carryover_seconds >= 90 else []
 review_items = collect_review_items(set_text, formatted)
 error_details = []
 for error in errors:
@@ -284,7 +290,9 @@ for error in errors:
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    output.textContent = Number(carryoverTime.value) < 90 ? data.text : ensureInitialSet(data.text);
+    output.textContent = addSetOperations.checked && Number(carryoverTime.value) >= 90
+      ? ensureInitialSet(data.text)
+      : data.text;
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
@@ -309,6 +317,10 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
 formatButton.addEventListener("click", formatTL);
 input.addEventListener("input", () => {
   autofillFormation(input.value);
+  diagnoseTL(input.value);
+});
+addSetOperations.addEventListener("change", () => {
+  if (addSetOperations.checked) autofillFormation(input.value);
   diagnoseTL(input.value);
 });
 clearButton.addEventListener("click", () => {
