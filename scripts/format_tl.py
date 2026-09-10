@@ -310,6 +310,9 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
                 display_names=display_names,
             )
             if event.star:
+                # 手動UBの ``''`` コメントは再変換時に区切り空白が
+                # 増えないよう、コメント直前だけ1個へ揃える。
+                rendered = re.sub(r"　{2,}(?='')", "　", rendered)
                 # ⭐️行のキャラ名以降にある説明は手動操作タイミングの
                 # コメントとして扱う。既存コメントとオート操作は除外する。
                 display_name = display_names.get(event.name, event.name)

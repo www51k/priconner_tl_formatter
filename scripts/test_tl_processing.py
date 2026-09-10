@@ -1095,6 +1095,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("0:07　ハツシオ", formatted)
         self.assertIn("0:06　リトリリ", formatted)
 
+    def test_unknown_long_words_are_preserved_as_notes(self) -> None:
+        formatted = format_text("0:10　バイオドーザー\n0:09　アオイ\n")
+        self.assertIn("0:10　バイオドーザー\n", formatted)
+        self.assertIn("0:09　アオイ\n", formatted)
+
 
 if __name__ == "__main__":
     unittest.main()

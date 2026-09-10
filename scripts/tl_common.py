@@ -400,7 +400,13 @@ def parse_event(
         body = re.sub(r"^(?:\d{1,2}:\d{1,2}(?:[-〜~]\d{1,2})?|\d{1,2})\s*", "", body)
         body = re.sub(r"^(?:→|⇒|->|>|➡︎|➡|⇨)\s*", "", body)
         generic = re.match(r"([^\s　\[\]【】()（）'\"「」『』]+)", body)
-        if generic and len(generic.group(1)) <= 8:
+        # 編成情報なしの動画TLでは、長いボス名・注釈・見出しを
+        # キャラクター発動と誤認しやすい。未知の長い語は原文として
+        # 保持し、既知名または編成で解決できる名前だけをイベント化する。
+        if generic and (
+            len(generic.group(1)) <= 4
+            or generic.group(1) in (character_names or {})
+        ):
             candidate = generic.group(1)
             if candidate not in {"開始時", "開始", "バトル開始", "ボス", "止めぽ"}:
                 name = candidate

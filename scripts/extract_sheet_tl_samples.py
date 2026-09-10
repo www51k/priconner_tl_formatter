@@ -66,7 +66,10 @@ def fetch_one(sample: dict[str, object]) -> dict[str, object]:
         "skip_download": True,
         "ignoreerrors": True,
         "socket_timeout": 20,
-        "cookiesfrombrowser": ("chrome",),
+        "retries": 0,
+        "extractor_retries": 0,
+        "fragment_retries": 0,
+        "extractor_args": {"youtube": {"player_client": ["android"]}},
         "remote_components": ["ejs:github"],
     }
     with YoutubeDL(options) as ydl:
@@ -83,7 +86,7 @@ def fetch_one(sample: dict[str, object]) -> dict[str, object]:
     return sample
 
 
-def fetch_descriptions(samples: list[dict[str, object]], workers: int = 3) -> list[dict[str, object]]:
+def fetch_descriptions(samples: list[dict[str, object]], workers: int = 8) -> list[dict[str, object]]:
     completed: dict[int, dict[str, object]] = {}
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {pool.submit(fetch_one, sample): index for index, sample in enumerate(samples)}
