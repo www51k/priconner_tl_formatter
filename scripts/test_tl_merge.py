@@ -1,6 +1,9 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
-from tl_merge import merge_events, parse_events
+from tl_merge import main, merge_events, parse_events
 
 
 FORMATION = [
@@ -34,6 +37,18 @@ class TLMergeTests(unittest.TestCase):
         events, unresolved = parse_events("01:00 未登録", "a", FORMATION)
         self.assertEqual(events, [])
         self.assertEqual(unresolved, ["未登録"])
+
+    def test_cli_writes_merge_json(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            a_path, b_path, out_path = root / "a.txt", root / "b.txt", root / "out.json"
+            a_path.write_text("01:15 ネラ\n01:08 シェフィ（サマー）\n", encoding="utf-8")
+            b_path.write_text("01:15 ネラ\n01:08 ペコリーヌ（ニューイヤー）\n", encoding="utf-8")
+            exit_code = main([str(a_path), str(b_path), "--formation", *FORMATION, "-o", str(out_path)])
+            self.assertEqual(exit_code, 0)
+            result = json.loads(out_path.read_text(encoding="utf-8"))
+            self.assertEqual(result["summary"], {"common": 1, "only_a": 1, "only_b": 1, "conflicts": 1})
+            self.assertEqual(result["unresolved"], {"a": [], "b": []})
 
 
 if __name__ == "__main__":

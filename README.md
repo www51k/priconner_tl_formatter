@@ -68,6 +68,7 @@ python3 scripts/format_tl.py input.txt formatted.txt
 python3 scripts/add_set_operations.py formatted.txt set_tl.txt --report set_tl.report.txt
 python3 scripts/validate_tl.py set_tl.txt
 python3 scripts/review_tl.py set_tl.txt review_queue.json --source formatted.txt --json
+python3 scripts/tl_merge.py raw.txt game.txt --formation "アオイ（パイロット）" "ネフィ＝ネラ（鬼面仏心）" "ツムギ（ジオ・ゲヘナ）" "ペコリーヌ（ニューイヤー）" "シェフィ（サマー）" -o merge.json
 python3 -m unittest scripts/test_tl_processing.py
 ```
 

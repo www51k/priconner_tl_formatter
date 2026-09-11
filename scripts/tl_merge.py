@@ -6,6 +6,8 @@ It is intended as a safe intermediate representation for a later formatter/UI.
 from __future__ import annotations
 
 import re
+import argparse
+import json
 from dataclasses import dataclass, asdict
 from typing import Iterable
 
@@ -136,3 +138,38 @@ def merge_events(*event_groups: Iterable[MergeEvent]) -> dict[str, list[dict]]:
         if len(names) > 1:
             conflicts.append({"seconds": seconds, "names": sorted(names)})
     return {"common": common, "only_a": only_a, "only_b": only_b, "conflicts": conflicts}
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Compare two Princess Connect battle timelines")
+    parser.add_argument("timeline_a")
+    parser.add_argument("timeline_b")
+    parser.add_argument("--formation", nargs=5, metavar="NAME", required=True,
+                        help="five formation names in SET order 5,4,3,2,1")
+    parser.add_argument("-o", "--output", help="write JSON to this file instead of stdout")
+    args = parser.parse_args(argv)
+    with open(args.timeline_a, encoding="utf-8") as handle:
+        text_a = handle.read()
+    with open(args.timeline_b, encoding="utf-8") as handle:
+        text_b = handle.read()
+    events_a, unresolved_a = parse_events(text_a, "a", args.formation)
+    events_b, unresolved_b = parse_events(text_b, "b", args.formation)
+    result = merge_events(events_a, events_b)
+    result["unresolved"] = {"a": unresolved_a, "b": unresolved_b}
+    result["summary"] = {
+        "common": len(result["common"]),
+        "only_a": len(result["only_a"]),
+        "only_b": len(result["only_b"]),
+        "conflicts": len(result["conflicts"]),
+    }
+    payload = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+    if args.output:
+        with open(args.output, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(payload)
+    else:
+        print(payload, end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
