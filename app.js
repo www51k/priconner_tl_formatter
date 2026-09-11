@@ -1,5 +1,5 @@
 const PYODIDE_VERSION = "0.27.2";
-const SCRIPT_NAMES = ["character_aliases.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py"];
+const SCRIPT_NAMES = ["character_aliases.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
 
 const input = document.querySelector("#input");
 const output = document.querySelector("#output");
@@ -16,6 +16,11 @@ const formationPanel = document.querySelector("#formation-panel");
 const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
 const addSetOperations = document.querySelector("#add-set-operations");
+const mergeA = document.querySelector("#merge-a");
+const mergeB = document.querySelector("#merge-b");
+const mergeButton = document.querySelector("#merge");
+const mergeStatus = document.querySelector("#merge-status");
+const mergeOutput = document.querySelector("#merge-output");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -238,7 +243,7 @@ async function loadPython() {
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260830-carryover-5`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260912-merge-1`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
@@ -252,6 +257,7 @@ from add_set_operations import add_operations
 from validate_tl import validate
 from review_tl import collect_review_items
 from tl_common import MASK_RE
+from tl_merge import parse_events, merge_events
 `);
       return pyodide;
     })();
@@ -338,6 +344,40 @@ copyButton.addEventListener("click", async () => {
   await navigator.clipboard.writeText(output.textContent);
   copyButton.textContent = "コピーしました";
   setTimeout(() => { copyButton.textContent = "コピー"; }, 1400);
+});
+
+mergeButton.addEventListener("click", async () => {
+  if (!mergeA.value.trim() || !mergeB.value.trim()) {
+    mergeStatus.textContent = "TL AとTL Bを入力してください";
+    mergeStatus.className = "status error";
+    return;
+  }
+  try {
+    const formation = [...formationList.querySelectorAll("input")].map((field) => field.value.trim()).filter(Boolean);
+    if (formation.length !== 5) throw new Error("編成を5人入力してください");
+    mergeButton.disabled = true;
+    const pyodide = await loadPython();
+    pyodide.globals.set("merge_text_a", mergeA.value);
+    pyodide.globals.set("merge_text_b", mergeB.value);
+    pyodide.globals.set("merge_formation", formation);
+    const result = await pyodide.runPythonAsync(`
+import json
+events_a, unresolved_a = parse_events(merge_text_a, "a", merge_formation)
+events_b, unresolved_b = parse_events(merge_text_b, "b", merge_formation)
+merged = merge_events(events_a, events_b)
+merged["unresolved"] = {"a": unresolved_a, "b": unresolved_b}
+merged["summary"] = {key: len(merged[key]) for key in ("common", "only_a", "only_b", "conflicts")}
+json.dumps(merged, ensure_ascii=False, indent=2)
+`);
+    mergeOutput.textContent = result;
+    mergeStatus.textContent = "比較完了";
+    mergeStatus.className = "status ready";
+  } catch (error) {
+    mergeStatus.textContent = error.message;
+    mergeStatus.className = "status error";
+  } finally {
+    mergeButton.disabled = false;
+  }
 });
 
 restoreFormationCache();

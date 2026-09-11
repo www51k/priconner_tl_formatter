@@ -59,6 +59,22 @@
         </div>
       </section>
 
+      <section class="panel merge-panel">
+        <div class="panel-heading">
+          <div><span class="step">03</span><h2>TLマージ確認</h2></div>
+          <span class="hint">差分と競合を確認してから統合方針を決めます</span>
+        </div>
+        <div class="merge-inputs">
+          <textarea id="merge-a" spellcheck="false" placeholder="TL A"></textarea>
+          <textarea id="merge-b" spellcheck="false" placeholder="TL B"></textarea>
+        </div>
+        <div class="actions">
+          <button id="merge" class="button primary" type="button">比較する</button>
+          <span id="merge-status" class="status" role="status"></span>
+        </div>
+        <pre id="merge-output" class="output-view merge-output" aria-label="TLマージ結果"></pre>
+      </section>
+
       <section class="panel result-panel">
         <div class="panel-heading">
           <div>
