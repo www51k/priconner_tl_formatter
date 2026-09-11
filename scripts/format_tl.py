@@ -385,7 +385,10 @@ def main() -> None:
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
-    args.output.write_text(format_text(args.input.read_text()), encoding="utf-8")
+    args.output.write_text(
+        format_text(args.input.read_text(encoding="utf-8")),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

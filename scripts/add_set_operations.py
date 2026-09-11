@@ -1278,7 +1278,7 @@ def main() -> None:
     report: list[str] = []
     args.output.write_text(
         add_operations(
-            args.input.read_text(),
+            args.input.read_text(encoding="utf-8"),
             args.initial,
             report,
             ignore_original_set=args.ignore_original_set,
