@@ -50,6 +50,11 @@ class TLMergeTests(unittest.TestCase):
             self.assertEqual(result["summary"], {"common": 1, "only_a": 1, "only_b": 1, "conflicts": 1})
             self.assertEqual(result["unresolved"], {"a": [], "b": []})
 
+    def test_html_spacing_entities_are_decoded(self):
+        events, unresolved = parse_events("01:15&#x20;ネラ&#x20;\n", "a", FORMATION)
+        self.assertEqual(unresolved, [])
+        self.assertEqual(events[0].name, "ネフィ＝ネラ（鬼面仏心）")
+
 
 if __name__ == "__main__":
     unittest.main()

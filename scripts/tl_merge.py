@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import argparse
+import html
 import json
 from dataclasses import dataclass, asdict
 from typing import Iterable
@@ -75,6 +76,8 @@ def character_resolver(formation: Iterable[str] = ()):
 
 def parse_events(text: str, source: str, formation: Iterable[str] = ()) -> tuple[list[MergeEvent], list[str]]:
     """Parse timed and arrow lines, returning events and unresolved names."""
+    # Browser/clipboard exports sometimes preserve HTML spacing entities.
+    text = html.unescape(text).replace("\u00a0", " ")
     formation_names = [n.strip() for n in formation if n and n.strip()]
     resolve = character_resolver(formation_names)
     events: list[MergeEvent] = []
