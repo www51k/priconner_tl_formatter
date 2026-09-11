@@ -231,6 +231,12 @@ class TlProcessingTests(unittest.TestCase):
         self.assertEqual(len(ub_items), 1)
         self.assertIn("SET・オート状態に関係なく", ub_items[0]["reason"])
 
+    def test_review_queue_flags_unstarred_manual_candidate(self) -> None:
+        text = "0:10　アオイ　通常cl後\n"
+        items = collect_review_items(text, text)
+        candidates = [item for item in items if item["kind"] == "MANUAL_CANDIDATE"]
+        self.assertEqual(len(candidates), 1)
+
     def test_add_operations_ignores_boss_event_when_reprocessing(self) -> None:
         text = (
             "[(5)ティア|(4)シオリ|(3)チエル|(2)タマキ|(1)すみれ]\n"

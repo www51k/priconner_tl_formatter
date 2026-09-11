@@ -11,6 +11,13 @@ spec.loader.exec_module(module)
 
 
 class ExtractCandidateTLTests(unittest.TestCase):
+    def test_accepts_variation_selector_and_formation_markers(self):
+        description = "⭐️1:20 クリア\n🔺0:10 サレン\n△→リリ\n説明"
+        self.assertEqual(
+            module.extract_candidate_tl(description),
+            "⭐️1:20 クリア\n🔺0:10 サレン\n△→リリ\n",
+        )
+
     def test_fetch_one_keeps_candidate_sections_in_result(self):
         class FakeYoutubeDL:
             def __init__(self, options):

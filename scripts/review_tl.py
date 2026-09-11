@@ -30,6 +30,13 @@ def collect_review_items(
                 "text": line,
                 "reason": "SET・オート状態に関係なく、キャラのUB発動記載を確認します",
             })
+        if event.manual_hint and event.name and not event.star:
+            items.append({
+                "line": line_no,
+                "kind": "MANUAL_CANDIDATE",
+                "text": line,
+                "reason": "説明付きの発動行ですが⭐️がないため、手動UBかどうか確認します",
+            })
         if event.arrow and event.name is None:
             stripped = line.strip()
             if "ボス" not in stripped and "止めぽ" not in stripped:

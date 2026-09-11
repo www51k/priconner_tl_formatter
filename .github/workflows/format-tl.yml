@@ -26,7 +26,7 @@ jobs:
           python-version: "3.11"
 
       - name: Run tests
-        run: python -m unittest scripts/test_tl_processing.py
+        run: python -m unittest discover -s scripts -p 'test_*.py'
 
       - name: Format and add SET operations
         id: process
