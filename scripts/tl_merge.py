@@ -13,6 +13,10 @@ from dataclasses import dataclass, asdict
 from typing import Iterable
 
 from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+try:
+    from character_master import CHARACTER_MASTER
+except ImportError:  # Local source checkout before the first sync.
+    CHARACTER_MASTER = {}
 
 
 TIME_LINE_RE = re.compile(
@@ -63,6 +67,15 @@ def character_resolver(formation: Iterable[str] = ()):
             candidates.add(re.split(r"[（(]", suffix, 1)[0])
         for candidate in candidates:
             aliases.setdefault(candidate, set()).add(formal)
+    # The formation remains authoritative, but the synced master supplies
+    # nicknames such as ``すみれ`` -> ``ヴァイオレット``.
+    for unit in CHARACTER_MASTER.values():
+        formal = str(unit.get("formal_name", ""))
+        if formal not in names:
+            continue
+        for candidate in unit.get("aliases", []):
+            if candidate:
+                aliases.setdefault(str(candidate), set()).add(formal)
 
     def resolve(raw: str) -> str | None:
         value = _clean_name(raw)

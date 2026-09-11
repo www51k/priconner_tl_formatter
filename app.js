@@ -1,5 +1,5 @@
 const PYODIDE_VERSION = "0.27.2";
-const SCRIPT_NAMES = ["character_aliases.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
+const SCRIPT_NAMES = ["character_aliases.py", "character_master.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
 
 const input = document.querySelector("#input");
 const output = document.querySelector("#output");
