@@ -283,12 +283,7 @@ function renderMergeLane() {
     timeline.append(insert);
   });
   mergeLane.append(timeline);
-  if (unmatched.children.length) {
-    const label = document.createElement("div");
-    label.className = "merge-lane-unmatched-title";
-    label.textContent = "未対応の整形済みTL（挿入候補）";
-    mergeLane.append(label, unmatched);
-  }
+  if (unmatched.children.length) timeline.append(unmatched);
 }
 
 battlePreview.addEventListener("scroll", () => { formattedPreview.scrollTop = battlePreview.scrollTop; });
