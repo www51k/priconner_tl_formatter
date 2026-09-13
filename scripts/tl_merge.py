@@ -165,28 +165,31 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     """
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
-    formatted_keys = {(event.seconds, event.name) for event in events_b}
-    additions = [event for event in events_a if (event.seconds, event.name) not in formatted_keys]
-    additions.sort(key=lambda event: (-event.seconds, event.order))
+    formatted_by_key: dict[tuple[int, str], list[MergeEvent]] = {}
+    battle_keys = {(event.seconds, event.name) for event in events_a}
+    for event in events_b:
+        formatted_by_key.setdefault((event.seconds, event.name), []).append(event)
 
-    # Keep the formatted TL line-for-line, including notes and SET metadata.
-    # Insert battle-only rows immediately before the first formatted event
-    # with a smaller timestamp, rather than appending them at the end.
-    base_lines = text_b.splitlines()
+    # The battle TL is authoritative for order. Use the formatted row when the
+    # same second and character exist there, preserving its annotations.
+    merged_events: list[MergeEvent] = []
+    used_formatted: set[int] = set()
+    for battle_event in events_a:
+        candidates = formatted_by_key.get((battle_event.seconds, battle_event.name), [])
+        formatted_event = next((item for item in candidates if item.order not in used_formatted), None)
+        if formatted_event is not None:
+            merged_events.append(formatted_event)
+            used_formatted.add(formatted_event.order)
+        else:
+            merged_events.append(battle_event)
 
-    def line_seconds(line: str) -> int | None:
-        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
-        return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
-
-    for addition in additions:
-        target = len(base_lines)
-        for index, line in enumerate(base_lines):
-            seconds = line_seconds(line)
-            if seconds is not None and seconds < addition.seconds:
-                target = index
-                break
-        base_lines.insert(target, addition.raw)
-    merged_text = "\n".join(base_lines).rstrip()
+    # Formatted-only rows are inserted by timestamp without changing battle
+    # row order. Non-event formatted lines are retained after the timeline.
+    formatted_only = [event for event in events_b if event.order not in used_formatted and (event.seconds, event.name) not in battle_keys]
+    for extra in sorted(formatted_only, key=lambda event: (-event.seconds, event.order)):
+        target = next((index for index, event in enumerate(merged_events) if event.seconds < extra.seconds), len(merged_events))
+        merged_events.insert(target, extra)
+    merged_text = "\n".join(event.raw for event in merged_events)
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
