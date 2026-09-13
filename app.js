@@ -257,7 +257,7 @@ from add_set_operations import add_operations
 from validate_tl import validate
 from review_tl import collect_review_items
 from tl_common import MASK_RE
-from tl_merge import parse_events, merge_events
+from tl_merge import parse_events, merge_events, merge_texts
 `);
       return pyodide;
     })();
