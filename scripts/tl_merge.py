@@ -165,17 +165,24 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     """
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
-    formatted_keys = {(event.seconds, event.name, event.arrow, event.manual) for event in events_b}
-    raw_only = [
-        event for event in events_a
-        if (event.seconds, event.name, event.arrow, event.manual) not in formatted_keys
-    ]
-    # Keep every line from the formatted TL (including headers, SET notes, and
-    # comments), then append only events absent from it from the battle TL.
-    additions = sorted(raw_only, key=lambda event: (-event.seconds, event.order))
-    base = text_b.rstrip()
-    extra = "\n".join(event.raw for event in additions)
-    merged_text = "\n".join(part for part in (base, extra) if part)
+    formatted_keys = {(event.seconds, event.name) for event in events_b}
+    additions = [event for event in events_a if (event.seconds, event.name) not in formatted_keys]
+    additions.sort(key=lambda event: (-event.seconds, event.order))
+
+    # Keep the formatted TL line-for-line, including notes and SET metadata.
+    # Insert battle-only rows immediately before the first formatted event
+    # with a smaller timestamp, rather than appending them at the end.
+    base_lines = text_b.splitlines()
+    event_lines = [(index, event) for index, event in enumerate(events_b)]
+    for addition in additions:
+        target = len(base_lines)
+        for index, event in event_lines:
+            if event.seconds < addition.seconds:
+                target = index
+                break
+        base_lines.insert(target, addition.raw)
+        event_lines = [(index + (1 if index >= target else 0), event) for index, event in event_lines]
+    merged_text = "\n".join(base_lines).rstrip()
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
