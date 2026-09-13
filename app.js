@@ -32,6 +32,7 @@ const OUTPUT_CACHE_KEY = "priconner_tl_formatter.output.v1";
 const MERGE_CACHE_KEY = "priconner_tl_formatter.merge.v1";
 
 let pyodidePromise;
+let characterAliasMap = {};
 let draggedSlot = null;
 let formationTouched = false;
 
@@ -119,7 +120,7 @@ function renderSourceRows(container, value, draggable) {
     row.dataset.index = String(index);
     row.draggable = draggable;
     row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-source-text" role="gridcell"></span>${draggable ? '<span class="merge-source-handle" aria-hidden="true">⠿</span>' : ''}`;
-    row.querySelector(".merge-source-text").textContent = line || " ";
+    row.querySelector(".merge-source-text").textContent = displayAliasNames(line) || " ";
     if (!draggable) {
       row.addEventListener("dragover", (event) => event.preventDefault());
       row.addEventListener("drop", (event) => {
@@ -144,6 +145,16 @@ function renderSourceRows(container, value, draggable) {
     container.append(row);
   });
   appendInsertZone(container, value.split("\n").length, draggable);
+}
+
+function displayAliasNames(line) {
+  let displayed = line;
+  Object.entries(characterAliasMap)
+    .sort(([left], [right]) => right.length - left.length)
+    .forEach(([formal, alias]) => {
+      displayed = displayed.split(formal).join(alias);
+    });
+  return displayed;
 }
 
 function appendInsertZone(container, index, draggable) {
@@ -353,7 +364,7 @@ function renderMergeLane() {
     const row = document.createElement("div");
     row.className = "merge-lane-row";
     row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-lane-text"></span>`;
-    row.querySelector(".merge-lane-text").textContent = line || " ";
+    row.querySelector(".merge-lane-text").textContent = displayAliasNames(line) || " ";
     if (formatted) {
       const detail = document.createElement("span");
       detail.className = "merge-lane-match";
@@ -631,6 +642,11 @@ async function loadPython() {
         if (!response.ok) throw new Error("data/character_aliases.json の読み込みに失敗しました");
         return response.text();
       });
+      const aliasPayload = JSON.parse(aliases);
+      characterAliasMap = {
+        ...(aliasPayload.character_aliases || {}),
+        ...(aliasPayload.learned_name_aliases || {}),
+      };
       pyodide.FS.writeFile("/home/pyodide/character_aliases.json", aliases);
       const bosses = await fetch("data/boss_names.json?v=20260913-boss-names").then((response) => {
         if (!response.ok) throw new Error("data/boss_names.json の読み込みに失敗しました");
