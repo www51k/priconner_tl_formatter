@@ -24,6 +24,7 @@ const mergeOutput = document.querySelector("#merge-output");
 const mergeEditor = document.querySelector("#merge-editor");
 const battlePreview = document.querySelector("#battle-preview");
 const formattedPreview = document.querySelector("#formatted-preview");
+const mergeLane = document.querySelector("#merge-lane");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
 const OUTPUT_CACHE_KEY = "priconner_tl_formatter.output.v1";
@@ -222,6 +223,48 @@ function renderMergeSources() {
   renderSourceRows(battlePreview, mergeA.value, false);
   renderSourceRows(formattedPreview, mergeB.value, true);
   requestAnimationFrame(syncSourceRowHeights);
+  renderMergeLane();
+}
+
+function renderMergeLane() {
+  mergeLane.replaceChildren();
+  const source = mergeB.value.split("\n");
+  const battle = mergeA.value.split("\n");
+  const title = document.createElement("div");
+  title.className = "merge-lane-title";
+  title.textContent = "整形済みTLの行を下のバトルTL行へドラッグ";
+  mergeLane.append(title);
+  const pool = document.createElement("div");
+  pool.className = "merge-lane-pool";
+  source.forEach((line, index) => {
+    const card = document.createElement("div");
+    card.className = "merge-lane-card formatted-card";
+    card.draggable = true;
+    card.dataset.index = String(index);
+    card.textContent = line || " ";
+    card.addEventListener("dragstart", () => { mergeLane.dataset.dragIndex = String(index); card.classList.add("dragging"); });
+    card.addEventListener("dragend", () => card.classList.remove("dragging"));
+    pool.append(card);
+  });
+  mergeLane.append(pool);
+  const timeline = document.createElement("div");
+  timeline.className = "merge-lane-timeline";
+  battle.forEach((line, index) => {
+    const row = document.createElement("div");
+    row.className = "merge-lane-row";
+    row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-lane-text"></span>`;
+    row.querySelector(".merge-lane-text").textContent = line || " ";
+    row.addEventListener("dragover", (event) => event.preventDefault());
+    row.addEventListener("drop", (event) => { event.preventDefault(); replaceBattleRow(Number(mergeLane.dataset.dragIndex), index); });
+    timeline.append(row);
+    const insert = document.createElement("div");
+    insert.className = "merge-lane-insert";
+    insert.textContent = "＋ ここへ挿入";
+    insert.addEventListener("dragover", (event) => event.preventDefault());
+    insert.addEventListener("drop", (event) => { event.preventDefault(); insertFormattedIntoBattle(Number(mergeLane.dataset.dragIndex), index + 1); });
+    timeline.append(insert);
+  });
+  mergeLane.append(timeline);
 }
 
 battlePreview.addEventListener("scroll", () => { formattedPreview.scrollTop = battlePreview.scrollTop; });
