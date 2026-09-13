@@ -243,8 +243,8 @@ function renderMergeLane() {
   title.className = "merge-lane-title";
   title.textContent = "整形済みTLの行を下のバトルTL行へドラッグ";
   mergeLane.append(title);
-  const pool = document.createElement("div");
-  pool.className = "merge-lane-pool";
+  const unmatched = document.createElement("div");
+  unmatched.className = "merge-lane-pool merge-lane-unmatched";
   source.forEach((line, index) => {
     const card = document.createElement("div");
     card.className = "merge-lane-card formatted-card";
@@ -255,9 +255,8 @@ function renderMergeLane() {
     card.addEventListener("dragend", () => card.classList.remove("dragging"));
     const value = key(line);
     card.hidden = Boolean(value && battle.some((battleLine) => key(battleLine) === value));
-    if (!card.hidden) pool.append(card);
+    if (!card.hidden) unmatched.append(card);
   });
-  if (pool.children.length) mergeLane.append(pool);
   const timeline = document.createElement("div");
   timeline.className = "merge-lane-timeline";
   battle.forEach((line, index) => {
@@ -284,6 +283,12 @@ function renderMergeLane() {
     timeline.append(insert);
   });
   mergeLane.append(timeline);
+  if (unmatched.children.length) {
+    const label = document.createElement("div");
+    label.className = "merge-lane-unmatched-title";
+    label.textContent = "未対応の整形済みTL（挿入候補）";
+    mergeLane.append(label, unmatched);
+  }
 }
 
 battlePreview.addEventListener("scroll", () => { formattedPreview.scrollTop = battlePreview.scrollTop; });

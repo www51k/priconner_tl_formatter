@@ -49,6 +49,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .merge-lane-card { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(114,224,179,.08); color: var(--text); font: 12px/1.4 ui-monospace, monospace; cursor: grab; }
 .merge-lane-card:hover { border-color: var(--accent); }
 .merge-lane-card.dragging { opacity: .4; }
+.merge-lane-unmatched-title { margin-top: 12px; color: var(--muted); font-size: .78rem; }
 .merge-lane-row { display: grid; grid-template-columns: 32px minmax(0,1fr); gap: 8px; margin-top: 6px; padding: 7px; border: 1px solid var(--line); border-radius: 8px; font: 13px/1.5 ui-monospace, monospace; }
 .merge-lane-match { grid-column: 2; margin-top: 4px; padding: 4px 7px; border-left: 3px solid var(--accent); color: var(--accent); background: rgba(114,224,179,.08); }
 .merge-lane-row:hover { border-color: #607086; }
