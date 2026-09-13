@@ -46,7 +46,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .merge-lane { margin: 10px 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #0a0f15; }
 .merge-lane-title { color: var(--accent); font-size: .8rem; font-weight: 800; margin-bottom: 8px; }
 .merge-lane-pool { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.merge-lane-card { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(114,224,179,.08); color: var(--text); font: 12px/1.4 ui-monospace, monospace; cursor: grab; }
+.merge-lane-card { padding: 6px 9px; border: 1px solid var(--line); border-radius: 8px; background: rgba(114,224,179,.08); color: var(--text); font: 12px/1.4 ui-monospace, monospace; cursor: grab; white-space: pre-wrap; }
 .merge-lane-card:hover { border-color: var(--accent); }
 .merge-lane-card.dragging { opacity: .4; }
 .merge-lane-unmatched { display: contents; }

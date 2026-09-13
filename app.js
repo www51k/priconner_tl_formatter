@@ -316,8 +316,17 @@ function renderMergeLane() {
   const blocks = (lines) => {
     const result = [];
     lines.forEach((line, index) => {
-      if (/(\d{1,2}):(\d{2})/.test(line) || !result.length) result.push({ start: index, lines: [line] });
-      else result[result.length - 1].lines.push(line);
+      const isTimed = /(\d{1,2}):(\d{2})/.test(line);
+      const isArrow = /(?:→|➡|⇨|⇒|->|>)/.test(line);
+      // 矢印は前の時刻行に連結せず、独立したドラッグ行にする。
+      // 範囲時刻直後のSETマスクだけは、2行一組として保持する。
+      const previous = result[result.length - 1];
+      const isRangeSetPair = previous
+        && /^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*\d{1,2}:\d{2}\s*[-〜~～－ー―‐—–]\s*\d{1,2}:?\d{1,2}/.test(previous.lines[0])
+        && /^\s*\[[0-9-]{5}\]\s*$/.test(line);
+      if (!result.length || isTimed || isArrow) result.push({ start: index, lines: [line] });
+      else if (isRangeSetPair) previous.lines.push(line);
+      else previous.lines.push(line);
     });
     return result;
   };
