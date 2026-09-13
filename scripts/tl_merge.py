@@ -5,14 +5,15 @@ It is intended as a safe intermediate representation for a later formatter/UI.
 """
 from __future__ import annotations
 
-import re
 import argparse
 import html
 import json
-from dataclasses import dataclass, asdict
-from typing import Iterable
+import re
+from collections.abc import Iterable
+from dataclasses import asdict, dataclass
 
 from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+
 try:
     from character_master import CHARACTER_MASTER
 except ImportError:  # Local source checkout before the first sync.
@@ -154,6 +155,23 @@ def merge_events(*event_groups: Iterable[MergeEvent]) -> dict[str, list[dict]]:
         if len(names) > 1:
             conflicts.append({"seconds": seconds, "names": sorted(names)})
     return {"common": common, "only_a": only_a, "only_b": only_b, "conflicts": conflicts}
+
+
+def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict[str, object]:
+    """Return one timeline containing the union of raw and formatted events.
+
+    The formatted timeline wins for duplicate events so its annotations are kept.
+    Events found only in the raw timeline are retained using their original lines.
+    """
+    events_a, unresolved_a = parse_events(text_a, "a", formation)
+    events_b, unresolved_b = parse_events(text_b, "b", formation)
+    chosen: dict[tuple[int, str, bool, bool], MergeEvent] = {}
+    for event in events_a:
+        chosen[(event.seconds, event.name, event.arrow, event.manual)] = event
+    for event in events_b:
+        chosen[(event.seconds, event.name, event.arrow, event.manual)] = event
+    events = sorted(chosen.values(), key=lambda event: (-event.seconds, event.order))
+    return {"text": "\n".join(event.raw for event in events), "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -59,41 +59,6 @@
         </div>
       </section>
 
-      <details class="late-stage-panel">
-        <summary>生TL取り込み</summary>
-      <section class="panel raw-import-panel late-stage-content">
-        <div class="panel-heading">
-          <div><span class="step">02</span><h2>生TL取り込み</h2></div>
-          <span class="hint">ゲーム内・外部サイトから取得した生TLはこちら</span>
-        </div>
-        <textarea id="raw-input" spellcheck="false" placeholder="生TLを貼り付けてください"></textarea>
-        <div class="actions">
-          <button id="format-raw" class="button ghost" type="button">元TLへ入れる</button>
-          <button id="send-raw-to-merge" class="button primary" type="button">マージ候補へ送る</button>
-          <span id="raw-status" class="status" role="status"></span>
-        </div>
-      </section>
-      </details>
-
-      <details class="late-stage-panel">
-        <summary>TLマージ確認</summary>
-      <section class="panel merge-panel late-stage-content">
-        <div class="panel-heading">
-          <div><span class="step">03</span><h2>TLマージ確認</h2></div>
-          <span class="hint">TL A＝生TL、TL B＝手書きTL</span>
-        </div>
-        <div class="merge-inputs">
-          <textarea id="merge-a" spellcheck="false" placeholder="TL A（生TL）"></textarea>
-          <textarea id="merge-b" spellcheck="false" placeholder="TL B（手書きTL）"></textarea>
-        </div>
-        <div class="actions">
-          <button id="merge" class="button primary" type="button">比較する</button>
-          <span id="merge-status" class="status" role="status"></span>
-        </div>
-        <pre id="merge-output" class="output-view merge-output" aria-label="TLマージ結果"></pre>
-      </section>
-      </details>
-
       <section class="panel result-panel">
         <div class="panel-heading">
           <div>
@@ -110,6 +75,25 @@
           <pre id="review-content"></pre>
         </div>
       </section>
+
+      <details class="late-stage-panel">
+        <summary>TLマージ確認</summary>
+        <section class="panel merge-panel late-stage-content">
+          <div class="panel-heading">
+            <div><span class="step">03</span><h2>TLマージ確認</h2></div>
+            <span class="hint">左：生TL、右：整形済みTL、下：マージ後TL</span>
+          </div>
+          <div class="merge-inputs">
+            <textarea id="merge-a" spellcheck="false" placeholder="生TL"></textarea>
+            <textarea id="merge-b" spellcheck="false" placeholder="整形済みTL"></textarea>
+          </div>
+          <div class="actions">
+            <button id="merge" class="button primary" type="button">マージする</button>
+            <span id="merge-status" class="status" role="status"></span>
+          </div>
+          <textarea id="merge-output" class="output-view merge-output" aria-label="マージ後TL" readonly></textarea>
+        </section>
+      </details>
 
       <footer>
         <span>処理はブラウザ内で完結します</span>

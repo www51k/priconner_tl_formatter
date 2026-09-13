@@ -21,10 +21,6 @@ const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
-const rawInput = document.querySelector("#raw-input");
-const sendRawToMerge = document.querySelector("#send-raw-to-merge");
-const rawStatus = document.querySelector("#raw-status");
-const formatRawButton = document.querySelector("#format-raw");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -303,6 +299,8 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
     output.textContent = addSetOperations.checked && Number(carryoverTime.value) >= 90
       ? ensureInitialSet(data.text)
       : data.text;
+    mergeA.value = source;
+    mergeB.value = output.textContent;
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
@@ -366,15 +364,12 @@ mergeButton.addEventListener("click", async () => {
     pyodide.globals.set("merge_formation", formation);
     const result = await pyodide.runPythonAsync(`
 import json
-events_a, unresolved_a = parse_events(merge_text_a, "a", merge_formation)
-events_b, unresolved_b = parse_events(merge_text_b, "b", merge_formation)
-merged = merge_events(events_a, events_b)
-merged["unresolved"] = {"a": unresolved_a, "b": unresolved_b}
-merged["summary"] = {key: len(merged[key]) for key in ("common", "only_a", "only_b", "conflicts")}
-json.dumps(merged, ensure_ascii=False, indent=2)
+merged = merge_texts(merge_text_a, merge_text_b, merge_formation)
+json.dumps(merged, ensure_ascii=False)
 `);
-    mergeOutput.textContent = result;
-    mergeStatus.textContent = "比較完了";
+    const data = JSON.parse(result);
+    mergeOutput.value = data.text;
+    mergeStatus.textContent = data.unresolved.length ? `マージ完了・要確認（${data.unresolved.join("、")}）` : "マージ完了";
     mergeStatus.className = "status ready";
   } catch (error) {
     mergeStatus.textContent = error.message;
@@ -382,32 +377,6 @@ json.dumps(merged, ensure_ascii=False, indent=2)
   } finally {
     mergeButton.disabled = false;
   }
-});
-
-sendRawToMerge.addEventListener("click", () => {
-  if (!rawInput.value.trim()) {
-    rawStatus.textContent = "生TLを入力してください";
-    rawStatus.className = "status error";
-    return;
-  }
-  mergeA.value = rawInput.value;
-  rawStatus.textContent = "TL Aへ設定しました。名寄せ用の編成を確認してください";
-  rawStatus.className = "status ready";
-  mergeA.focus();
-});
-
-formatRawButton.addEventListener("click", () => {
-  if (!rawInput.value.trim()) {
-    rawStatus.textContent = "生TLを入力してください";
-    rawStatus.className = "status error";
-    return;
-  }
-  input.value = rawInput.value;
-  input.dispatchEvent(new Event("input", {bubbles: true}));
-  rawStatus.textContent = "元TLへ入れました。上の『整形する』を押してください";
-  rawStatus.className = "status ready";
-  input.focus();
-  input.scrollIntoView({behavior: "smooth", block: "center"});
 });
 
 restoreFormationCache();
