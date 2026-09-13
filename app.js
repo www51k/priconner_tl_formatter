@@ -23,6 +23,7 @@ const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
+const MERGE_CACHE_KEY = "priconner_tl_formatter.merge.v1";
 
 let pyodidePromise;
 let draggedSlot = null;
@@ -70,6 +71,30 @@ function restoreInputCache() {
     input.value = localStorage.getItem(INPUT_CACHE_KEY) || "";
   } catch (_) {
     // 保存データを利用できない場合は空欄から開始する。
+  }
+}
+
+function saveMergeCache() {
+  try {
+    localStorage.setItem(MERGE_CACHE_KEY, JSON.stringify({
+      battle: mergeA.value,
+      formatted: mergeB.value,
+      result: mergeOutput.value,
+    }));
+  } catch (_) {
+    // 保存できない環境でもマージ処理は継続する。
+  }
+}
+
+function restoreMergeCache() {
+  try {
+    const data = JSON.parse(localStorage.getItem(MERGE_CACHE_KEY) || "null");
+    if (!data || typeof data !== "object") return;
+    mergeA.value = typeof data.battle === "string" ? data.battle : "";
+    mergeB.value = typeof data.formatted === "string" ? data.formatted : "";
+    mergeOutput.value = typeof data.result === "string" ? data.result : "";
+  } catch (_) {
+    // 保存データが壊れていても空欄から開始する。
   }
 }
 
@@ -366,6 +391,9 @@ copyButton.addEventListener("click", async () => {
   setTimeout(() => { copyButton.textContent = "コピー"; }, 1400);
 });
 
+mergeA.addEventListener("input", saveMergeCache);
+mergeB.addEventListener("input", saveMergeCache);
+
 mergeButton.addEventListener("click", async () => {
   if (!mergeA.value.trim() || !mergeB.value.trim()) {
     mergeStatus.textContent = "TL AとTL Bを入力してください";
@@ -387,6 +415,7 @@ json.dumps(merged, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
     mergeOutput.value = data.text;
+    saveMergeCache();
     mergeStatus.textContent = data.unresolved.length ? `マージ完了・要確認（${data.unresolved.join("、")}）` : "マージ完了";
     mergeStatus.className = "status ready";
   } catch (error) {
@@ -399,6 +428,7 @@ json.dumps(merged, ensure_ascii=False)
 
 restoreFormationCache();
 restoreInputCache();
+restoreMergeCache();
 autofillFormation(input.value);
 diagnoseTL(input.value);
 loadPython().then(() => setStatus("準備完了", "ready")).catch((error) => setStatus(`読み込みに失敗しました: ${error.message}`, "error"));
