@@ -157,6 +157,15 @@ function displayAliasNames(line) {
   return displayed;
 }
 
+function normalizeMergedArrowSpacing(text) {
+  return text.split("\n").map((line) => {
+    if (/^\s*⭐️\s*(?:→|➡︎|➡|⇨|⇒|->|>)/.test(line)) {
+      return line.replace(/^\s*⭐️\s*(?:→|➡︎|➡|⇨|⇒|->|>)/, "⭐️　　→");
+    }
+    return line.replace(/^\s*(?:→|➡︎|➡|⇨|⇒|->|>)/, "　　　→");
+  }).join("\n");
+}
+
 function appendInsertZone(container, index, draggable) {
   const zone = document.createElement("div");
   zone.className = `merge-insert-zone${draggable ? "" : " merge-insert-zone-left"}`;
@@ -790,7 +799,7 @@ json.dumps(merged, ensure_ascii=False)
     const data = JSON.parse(result);
     const mergedText = removeArrowDuplicates(data.text, mergeB.value);
     pyodide.globals.set("merged_text_for_format", mergedText);
-    mergeOutput.value = await pyodide.runPythonAsync("format_text(merged_text_for_format)");
+    mergeOutput.value = normalizeMergedArrowSpacing(await pyodide.runPythonAsync("format_text(merged_text_for_format)"));
     mergeCopyButton.disabled = !mergeOutput.value;
     saveMergeCache();
     renderMergeEditor();
