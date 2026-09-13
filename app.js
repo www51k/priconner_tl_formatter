@@ -255,7 +255,7 @@ function renderMergeLane() {
     card.addEventListener("dragend", () => card.classList.remove("dragging"));
     const value = key(line);
     card.hidden = Boolean(value && battle.some((battleLine) => key(battleLine) === value));
-    if (!card.hidden) unmatched.push({ card, seconds: secondsOf(line) });
+    if (!card.hidden && value && secondsOf(line) !== null) unmatched.push({ card, seconds: secondsOf(line) });
   });
   const timeline = document.createElement("div");
   timeline.className = "merge-lane-timeline";
