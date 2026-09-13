@@ -23,6 +23,7 @@ const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
+const OUTPUT_CACHE_KEY = "priconner_tl_formatter.output.v1";
 const MERGE_CACHE_KEY = "priconner_tl_formatter.merge.v1";
 
 let pyodidePromise;
@@ -69,6 +70,23 @@ function saveInputCache() {
 function restoreInputCache() {
   try {
     input.value = localStorage.getItem(INPUT_CACHE_KEY) || "";
+  } catch (_) {
+    // 保存データを利用できない場合は空欄から開始する。
+  }
+}
+
+function saveOutputCache() {
+  try {
+    localStorage.setItem(OUTPUT_CACHE_KEY, output.textContent);
+  } catch (_) {
+    // 保存できない環境でも整形処理は継続する。
+  }
+}
+
+function restoreOutputCache() {
+  try {
+    output.textContent = localStorage.getItem(OUTPUT_CACHE_KEY) || "";
+    copyButton.disabled = !output.textContent;
   } catch (_) {
     // 保存データを利用できない場合は空欄から開始する。
   }
@@ -342,6 +360,7 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
       ? ensureInitialSet(data.text)
       : data.text;
     mergeB.value = output.textContent;
+    saveOutputCache();
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
@@ -377,6 +396,7 @@ clearButton.addEventListener("click", () => {
   input.value = "";
   saveInputCache();
   output.textContent = "";
+  saveOutputCache();
   copyButton.disabled = true;
   validation.hidden = true;
   review.hidden = true;
@@ -428,6 +448,7 @@ json.dumps(merged, ensure_ascii=False)
 
 restoreFormationCache();
 restoreInputCache();
+restoreOutputCache();
 restoreMergeCache();
 autofillFormation(input.value);
 diagnoseTL(input.value);
