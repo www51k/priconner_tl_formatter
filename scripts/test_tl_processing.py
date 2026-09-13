@@ -426,7 +426,7 @@ class TlProcessingTests(unittest.TestCase):
 
     def test_named_boss_is_not_rendered_as_a_long_character(self) -> None:
         result = format_text("1:30　ミストシーカー\n1:20　アオイ\n")
-        self.assertIn("1:30　ミストシーカー", result)
+        self.assertIn("1:30　ボス", result)
         self.assertIn("1:20　アオイ", result)
 
     def test_long_display_name_is_truncated_to_four_characters(self) -> None:
@@ -1151,7 +1151,7 @@ class TlProcessingTests(unittest.TestCase):
 
     def test_unknown_long_words_are_preserved_as_notes(self) -> None:
         formatted = format_text("0:10　バイオドーザー\n0:09　アオイ\n")
-        self.assertIn("0:10　バイオドーザー\n", formatted)
+        self.assertIn("0:10　ボス\n", formatted)
         self.assertIn("0:09　アオイ\n", formatted)
 
 

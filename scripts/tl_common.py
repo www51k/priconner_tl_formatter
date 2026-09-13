@@ -69,6 +69,7 @@ def normalize_input_line(line: str) -> str:
     # キャラ名などの構造表記を整えた後、同期済みのボス名を統一する。
     for boss_name in sorted(BOSS_NAMES, key=len, reverse=True):
         head = head.replace(boss_name, "ボス")
+    head = re.sub(r"^[\\\-_=~]+(\d{1,2}:\d{2})\s+ボス\s+[\\\-_=~]+\s*(\[[^\n]+\])$", r"\1　ボス　\2", head)
     full_range = re.match(r"^(.*?)(\d{1,2}):(\d{1,2})\s*[-〜~～－ー―‐—–]\s*(\d{1,2})\s*:\s*(\d{1,2})(.*)$", head)
     if full_range:
         prefix, start_min, start_sec, end_min, end_sec, suffix = full_range.groups()
