@@ -496,6 +496,11 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("0:17　フィオ", formatted)
         self.assertIn("⭐️1:02　ペコ", formatted)
 
+    def test_time_range_is_not_corrupted_or_treated_as_set(self) -> None:
+        formatted = format_text("⭐️1:00-0:59　''※シオリSET\n")
+        self.assertIn("⭐️1:00-00:59", formatted)
+        self.assertNotIn("[", formatted)
+
     def test_tl_display_declarations_override_formal_name_display(self) -> None:
         text = "すみれ\nTL表記は波レ\n1:17　すみれ\n"
         self.assertIn("1:17　すみれ", format_text(text))

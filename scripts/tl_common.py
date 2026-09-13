@@ -334,13 +334,17 @@ def normalize_time_prefix(prefix: str) -> str:
         prefix,
         count=1,
     )
+    # 時刻範囲の終端に単一時刻用のゼロ埋めが誤適用された場合も復元する。
+    normalized = re.sub(r"(\d{1,2}:\d{2})-(\d{1,2})\s*:\s*(\d{1,2})", lambda m: f"{m.group(1)}-{int(m.group(2)):02d}:{int(m.group(3)):02d}", normalized, count=1)
     normalized = re.sub(
-        r"(\d{1,2}:\d{1,2})[ \t　]*[〜~～－ー―‐—–-][ \t　]*(\d{1,2})(?=\D|$)",
+        r"(\d{1,2}:\d{1,2})[ \t　]*[〜~～－ー―‐—–-][ \t　]*(\d{1,2})(?!:)(?=\D|$)",
         r"\1-\2",
         normalized,
         count=1,
     )
-    normalized = TIME_TOKEN_RE.sub(replace, normalized, count=1)
+    # 完全な時刻範囲はここで単一時刻として再解釈しない。
+    if not re.search(r"\d{1,2}:\d{1,2}-\d{1,2}:\d{1,2}", normalized):
+        normalized = TIME_TOKEN_RE.sub(replace, normalized, count=1)
     if TIME_RE.search(normalized) is None:
         bare_match = BARE_TIME_TOKEN_RE.match(normalized)
         if bare_match:
