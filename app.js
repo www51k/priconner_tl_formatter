@@ -111,6 +111,7 @@ function renderSourceRows(container, value, draggable) {
   container.replaceChildren();
   if (!value) return;
   value.split("\n").forEach((line, index) => {
+    if (draggable) appendInsertZone(container, index);
     const row = document.createElement("div");
     row.className = "merge-source-row";
     row.dataset.index = String(index);
@@ -128,23 +129,54 @@ function renderSourceRows(container, value, draggable) {
         event.preventDefault();
         const from = Number(formattedPreview.dataset.dragIndex);
         const to = Number(row.dataset.index);
-        if (!Number.isInteger(from) || from === to) return;
-        const lines = mergeB.value.split("\n");
-        const [moved] = lines.splice(from, 1);
-        lines.splice(to, 0, moved);
-        mergeB.value = lines.join("\n");
-        saveMergeCache();
-        renderSourceRows(battlePreview, mergeA.value, false);
-        renderSourceRows(formattedPreview, mergeB.value, true);
+        moveFormattedRow(from, to);
       });
     }
     container.append(row);
   });
+  if (draggable) appendInsertZone(container, value.split("\n").length);
+}
+
+function appendInsertZone(container, index) {
+  const zone = document.createElement("div");
+  zone.className = "merge-insert-zone";
+  zone.dataset.index = String(index);
+  zone.textContent = "＋ ここへ挿入";
+  zone.addEventListener("dragover", (event) => event.preventDefault());
+  zone.addEventListener("drop", (event) => {
+    event.preventDefault();
+    moveFormattedRow(Number(formattedPreview.dataset.dragIndex), index);
+  });
+  container.append(zone);
+}
+
+function moveFormattedRow(from, target) {
+  const lines = mergeB.value.split("\n");
+  if (!Number.isInteger(from) || !Number.isInteger(target) || from < 0 || from >= lines.length) return;
+  const [moved] = lines.splice(from, 1);
+  const destination = target > from ? target - 1 : target;
+  if (destination === from) return;
+  lines.splice(Math.max(0, Math.min(destination, lines.length)), 0, moved);
+  mergeB.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
+}
+
+function syncSourceRowHeights() {
+  const left = [...battlePreview.querySelectorAll(".merge-source-row")];
+  const right = [...formattedPreview.querySelectorAll(".merge-source-row")];
+  const count = Math.max(left.length, right.length);
+  for (let index = 0; index < count; index += 1) {
+    const height = Math.max(left[index]?.offsetHeight || 0, right[index]?.offsetHeight || 0);
+    if (left[index]) left[index].style.minHeight = `${height}px`;
+    if (right[index]) right[index].style.minHeight = `${height}px`;
+  }
 }
 
 function renderMergeSources() {
   renderSourceRows(battlePreview, mergeA.value, false);
   renderSourceRows(formattedPreview, mergeB.value, true);
+  requestAnimationFrame(syncSourceRowHeights);
 }
 
 battlePreview.addEventListener("scroll", () => { formattedPreview.scrollTop = battlePreview.scrollTop; });

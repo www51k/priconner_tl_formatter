@@ -56,6 +56,8 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .merge-source-text { min-width: 0; }
 .merge-source-text { user-select: none; }
 .merge-source-handle { color: var(--muted); user-select: none; }
+.merge-insert-zone { height: 10px; margin: 0 2px; color: transparent; font: 11px/10px ui-sans-serif, sans-serif; text-align: center; border-radius: 5px; }
+.merge-insert-zone:hover, .merge-insert-zone:has(+ .merge-source-row.dragging) { height: 22px; color: var(--accent); border: 1px dashed var(--accent); background: rgba(114,224,179,.08); }
 .merge-output { min-height: 120px; margin-top: 14px; }
 .merge-direction { color: var(--accent); font-size: .9rem; font-weight: 800; letter-spacing: .04em; }
 .merge-field { display: block; color: var(--accent); font-weight: 800; line-height: 1.5; }
