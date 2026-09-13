@@ -16,6 +16,7 @@ const formationPanel = document.querySelector("#formation-panel");
 const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
 const addSetOperations = document.querySelector("#add-set-operations");
+const preserveSetOperations = document.querySelector("#preserve-set-operations");
 const mergeA = document.querySelector("#merge-a");
 const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
@@ -703,9 +704,10 @@ async function formatTL() {
     pyodide.globals.set("source_text", sourceWithFormation);
     pyodide.globals.set("carryover_seconds", Number(carryoverTime.value));
     pyodide.globals.set("add_set_operations", addSetOperations.checked);
+    pyodide.globals.set("preserve_set_operations", preserveSetOperations.checked);
     const result = await pyodide.runPythonAsync(`
 import json
-formatted = format_text(source_text, carryover_seconds=carryover_seconds)
+formatted = format_text(source_text, carryover_seconds=carryover_seconds, preserve_set_operations=preserve_set_operations)
 report = []
 set_text = add_operations(formatted, report=report) if add_set_operations and carryover_seconds >= 90 else formatted
 errors = validate(set_text) if add_set_operations and carryover_seconds >= 90 else []

@@ -182,7 +182,11 @@ def shift_tl_times(text: str, carryover_seconds: int = 90) -> str:
     return "".join(shifted_lines)
 
 
-def format_text(text: str, carryover_seconds: int = 90) -> str:
+def format_text(
+    text: str,
+    carryover_seconds: int = 90,
+    preserve_set_operations: bool = False,
+) -> str:
     text = shift_tl_times(text, carryover_seconds)
     output: list[str] = []
     character_names = character_names_from_formation(text)
@@ -203,7 +207,20 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
         if source_line.strip() == "--------------------":
             normalized_lines.append(source_line)
             continue
-        normalized = normalize_input_line(source_line)
+        set_token = None
+        line_for_format = source_line
+        if preserve_set_operations:
+            set_match = MASK_RE.search(line_for_format)
+            if set_match:
+                set_token = set_match.group(0)
+                line_for_format = (
+                    line_for_format[:set_match.start()]
+                    + "__TL_SET_TOKEN__"
+                    + line_for_format[set_match.end():]
+                )
+        normalized = normalize_input_line(line_for_format)
+        if set_token:
+            normalized = normalized.replace("__TL_SET_TOKEN__", set_token, 1)
         normalized_lines.extend(split_inline_character_arrow(normalized))
     manual_time_buckets: set[int] = set()
     for normalized_line in normalized_lines:
@@ -302,7 +319,10 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
             # SETの内容は変更せず、手動操作だけ次行先頭へ移す。
             # 手動UBとSETを同じ行に置くと見落としやすいため、配置だけを
             # 変更し、マスク自体の再計算は行わない。
-            inline_mask = None if event.star else (f"[{event.mask}]" if event.mask else None)
+            inline_mask = (
+                f"[{event.mask}]" if event.mask and preserve_set_operations
+                else (None if event.star else (f"[{event.mask}]" if event.mask else None))
+            )
             rendered = render_event(
                 event,
                 inline_mask,
@@ -360,7 +380,7 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
                 previous_event_was_star = event.star
                 previous_event_was_indented = rendered_has_leading_indent
             output.append(rendered)
-            if event.star and event.mask:
+            if event.star and event.mask and not preserve_set_operations:
                 output.append(f"[{event.mask}]")
         else:
             arrow_chain_active = False

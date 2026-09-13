@@ -1154,6 +1154,13 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("0:10　ボス\n", formatted)
         self.assertIn("0:09　アオイ\n", formatted)
 
+    def test_preserve_set_operations_keeps_mask_unchanged(self) -> None:
+        source = "1:06　チエル　[5-321]\n→　タマキ　[5-3-1]\n"
+        formatted = format_text(source, preserve_set_operations=True)
+        self.assertIn("1:06　チエル　　[5-321]", formatted)
+        self.assertIn("→　タマキ　　[5-3-1]", formatted)
+        self.assertNotIn("[54321]", formatted)
+
 
 if __name__ == "__main__":
     unittest.main()
