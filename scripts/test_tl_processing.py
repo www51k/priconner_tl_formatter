@@ -510,6 +510,12 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("1:00-0:59", format_text("1:00-00:59　シオリ\n"))
         self.assertIn("1:00-0:59", format_text("1:00-00　:59　シオリ\n"))
 
+    def test_time_range_keeps_attached_set_operation(self) -> None:
+        formatted = format_text("1:00-0:59　[543-1]\n")
+        self.assertIn("1:00-0:59　[543-1]", formatted)
+        formatted = format_text("⭐️1:00-0:59　''※シオリSET\n[543-1]\n")
+        self.assertIn("[543-1]", formatted)
+
     def test_carryover_shifts_time_range_as_a_range(self) -> None:
         formatted = format_text("1:00-0:59　シオリ\n", carryover_seconds=60)
         self.assertIn("0:30-29", formatted)
