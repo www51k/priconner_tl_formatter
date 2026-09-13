@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tl_merge import main, merge_events, merge_texts, parse_events
+from tl_merge import expand_arrow_times, main, merge_events, merge_texts, parse_events
 
 
 FORMATION = [
@@ -16,6 +16,8 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_arrows_are_expanded_to_original_time_before_merge(self):
+        self.assertEqual(expand_arrow_times("0:40　すみれ\n　　　→　タマキ"), "0:40　すみれ\n0:40　タマキ")
     def test_range_set_line_stays_inside_formatted_block(self):
         result = merge_texts(
             "01:00 シオリ\n",

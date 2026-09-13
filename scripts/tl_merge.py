@@ -96,6 +96,10 @@ def character_resolver(formation: Iterable[str] = ()):
         candidates.add(re.split(r"[（(]", formal, 1)[0])
         for candidate in candidates:
             aliases.setdefault(candidate, set()).add(formal)
+    for formal, short in CHARACTER_ALIASES.items():
+        if formal and short:
+            aliases.setdefault(formal, set()).update({formal, short})
+            aliases.setdefault(short, set()).add(formal)
     # The formation remains authoritative, but the synced master supplies
     # nicknames such as ``すみれ`` -> ``ヴァイオレット``.
     for unit in CHARACTER_MASTER.values():
@@ -153,6 +157,22 @@ def parse_events(text: str, source: str, formation: Iterable[str] = ()) -> tuple
     return events, sorted(set(unresolved))
 
 
+def expand_arrow_times(text: str) -> str:
+    """矢印先を元の時刻付き1行へ戻してからマージする。"""
+    current_time: str | None = None
+    expanded: list[str] = []
+    for line in text.splitlines():
+        timed = re.search(r"(?<!\d)(\d{1,2}:\d{2})(?!\d)", line)
+        if timed:
+            current_time = timed.group(1)
+        arrow = re.match(r"^(\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?)(?:→|➡︎|➡|⇨|⇒|->|>)\s*(.*)$", line)
+        if arrow and current_time:
+            expanded.append(f"{current_time}　{arrow.group(2)}")
+        else:
+            expanded.append(line)
+    return "\n".join(expanded)
+
+
 def merge_events(*event_groups: Iterable[MergeEvent]) -> dict[str, list[dict]]:
     """Classify equal events, source-only events, and same-slot conflicts."""
     buckets: dict[tuple[int, str], list[MergeEvent]] = {}
@@ -191,6 +211,8 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     The formatted timeline wins for duplicate events so its annotations are kept.
     Events found only in the raw timeline are retained using their original lines.
     """
+    text_a = expand_arrow_times(text_a)
+    text_b = expand_arrow_times(text_b)
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
     formatted_lines = text_b.splitlines()
