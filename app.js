@@ -431,7 +431,6 @@ mergeButton.addEventListener("click", async () => {
     const result = await pyodide.runPythonAsync(`
 import json
 merged = merge_texts(merge_text_a, merge_text_b, merge_formation)
-merged["text"] = format_text(merged["text"])
 json.dumps(merged, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
