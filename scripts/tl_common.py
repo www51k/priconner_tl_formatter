@@ -42,7 +42,13 @@ def _load_boss_names() -> set[str]:
 BOSS_NAMES = _load_boss_names()
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
-DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES | LEARNED_NAME_ALIASES
+# 一部の旧TLで使われる常用名は、統合マスタに未収録でも解析対象にする。
+DISPLAY_NAMES = (
+    {name: name for name in CHARACTERS}
+    | {"フブキ": "フブキ"}
+    | CHARACTER_ALIASES
+    | LEARNED_NAME_ALIASES
+)
 TIME_RE = re.compile(r"\d+:\d{1,2}(?:-\d{1,2})?")
 TIME_TOKEN_RE = re.compile(r"(?<!\d)(\d+):(\d{1,2})(?:-(\d{1,2}))?")
 BARE_TIME_RE = re.compile(r"\d{1,2}(?=\s|　|$)")
