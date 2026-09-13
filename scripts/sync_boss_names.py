@@ -10,8 +10,8 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1S2AOOnx6_Wk95atC_s0Rimeo1YPyYxaegQj8dCovjt4"
-DEFAULT_GID = "1842654326"  # ★boss_name
+DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
+DEFAULT_GID = "688432019"  # clan_battle_bosses
 
 
 def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
@@ -23,6 +23,11 @@ def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
 
 def build_boss_names(csv_text: str) -> list[str]:
     rows = list(csv.reader(io.StringIO(csv_text)))
+    if rows and rows[0][:5] == ["id", "name", "name_en", "aliases", "release"]:
+        names = [row[1].strip() for row in rows[1:] if len(row) >= 2 and row[1].strip()]
+        if not names:
+            raise ValueError("ボス名を1件も取得できませんでした")
+        return list(dict.fromkeys(names))
     if len(rows) < 2 or not rows[0] or rows[0][0] != "boss1":
         raise ValueError("★boss_nameタブのヘッダーが想定と異なります")
     names = [cell.strip() for cell in rows[1] if cell.strip()]

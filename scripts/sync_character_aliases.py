@@ -10,8 +10,8 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1dBdhRLehzwKyKKKt0OLBDXqy4F2L_cd_HF6-KOqu4vM"
-DEFAULT_GID = "1581974480"
+DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
+DEFAULT_GID = "53006538"  # characters
 
 
 def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
@@ -23,6 +23,26 @@ def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
 
 def build_aliases(csv_text: str) -> dict[str, dict[str, str]]:
     rows = list(csv.reader(io.StringIO(csv_text)))
+    if rows and rows[0][:4] == ["id", "name", "name_en", "aliases"]:
+        aliases: dict[str, str] = {}
+        for row in rows[1:]:
+            if len(row) < 2 or not row[1].strip():
+                continue
+            formal = row[1].strip()
+            values = []
+            if len(row) >= 4 and row[3].strip():
+                try:
+                    values = json.loads(row[3])
+                except json.JSONDecodeError:
+                    values = [row[3]]
+            for value in values:
+                alias = str(value).strip()
+                if alias and alias != formal:
+                    aliases[alias] = formal
+        return {
+            "character_aliases": dict(sorted(aliases.items())),
+            "learned_name_aliases": {"スミレ": "すみれ"},
+        }
     if not rows or rows[0][:3] != ["キャラID", "名称", "略称"]:
         raise ValueError("キャラタブのヘッダーが想定と異なります")
     aliases: dict[str, str] = {}

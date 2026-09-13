@@ -13,8 +13,8 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1S2AOOnx6_Wk95atC_s0Rimeo1YPyYxaegQj8dCovjt4"
-DEFAULT_GID = "1793615076"
+DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
+DEFAULT_GID = "53006538"  # characters
 
 
 def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
@@ -27,6 +27,26 @@ def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
 
 def build_master(csv_text: str) -> dict[str, dict[str, object]]:
     rows = list(csv.reader(io.StringIO(csv_text)))
+    if rows and rows[0][:4] == ["id", "name", "name_en", "aliases"]:
+        records: dict[str, dict[str, object]] = {}
+        for row in rows[1:]:
+            if len(row) < 2 or not row[0].strip() or not row[1].strip():
+                continue
+            aliases: list[str] = []
+            if len(row) >= 4 and row[3].strip():
+                try:
+                    aliases = [str(value).strip() for value in json.loads(row[3]) if str(value).strip()]
+                except json.JSONDecodeError:
+                    aliases = [row[3].strip()]
+            formal = row[1].strip()
+            records[row[0].strip()] = {
+                "formal_name": formal,
+                "aliases": list(dict.fromkeys([formal, *aliases])),
+                "image_url": "",
+            }
+        if not records:
+            raise ValueError("キャラクターマスタを1件も取得できませんでした")
+        return dict(sorted(records.items()))
     if len(rows) < 3:
         raise ValueError("引用情報シートにデータ行がありません")
     # The sheet's stable data columns are G:J and L:O (zero-based 6:10, 11:15).
