@@ -189,6 +189,15 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     # following arrows, notes, SET masks, and comments until the next event.
     merged_blocks: list[tuple[int, list[str]]] = []
     used_formatted: set[int] = set()
+
+    def normalize_added_line(line: str) -> str:
+        stripped = line.strip(" \t　")
+        match = re.match(r"(\d{1,2}):(\d{1,2})(.*)$", stripped)
+        if not match:
+            return line
+        minute, second, rest = int(match.group(1)), int(match.group(2)), match.group(3).strip(" \t　")
+        return f"{minute}:{second:02d}　{rest}" if rest else f"{minute}:{second:02d}"
+
     for battle_event in events_a:
         candidates = formatted_by_key.get((battle_event.seconds, battle_event.name), [])
         formatted_event = next((item for item in candidates if item.order not in used_formatted), None)
@@ -196,7 +205,7 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
             merged_blocks.append((battle_event.seconds, blocks[formatted_event.order]))
             used_formatted.add(formatted_event.order)
         else:
-            merged_blocks.append((battle_event.seconds, [battle_event.raw]))
+            merged_blocks.append((battle_event.seconds, [normalize_added_line(battle_event.raw)]))
 
     # Add formatted-only blocks at their timestamp without changing battle
     # event order.
