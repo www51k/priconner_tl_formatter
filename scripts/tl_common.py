@@ -66,7 +66,7 @@ def normalize_input_line(line: str) -> str:
         head, comment = source[:comment_start], source[comment_start:]
     else:
         head, comment = source, ""
-    full_range = re.match(r"^(.*?)(\d{1,2}):(\d{1,2})\s*[-〜~～－ー―‐—–]\s*(\d{1,2}):(\d{1,2})(.*)$", head)
+    full_range = re.match(r"^(.*?)(\d{1,2}):(\d{1,2})\s*[-〜~～－ー―‐—–]\s*(\d{1,2})\s*:\s*(\d{1,2})(.*)$", head)
     if full_range:
         prefix, start_min, start_sec, end_min, end_sec, suffix = full_range.groups()
         head = f"{prefix}{int(start_min)}:{int(start_sec):02d}-{int(end_min)}:{int(end_sec):02d}{suffix}"
