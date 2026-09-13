@@ -168,7 +168,7 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     formatted_lines = text_b.splitlines()
 
     def line_seconds(line: str) -> int | None:
-        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
+        match = re.search(r"(\d{1,2}):(\d{1,2})", line)
         return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
 
     formatted_events = sorted(events_b, key=lambda event: event.order)
