@@ -39,6 +39,7 @@ h2 { margin: 0; font-size: 1.1rem; }
 textarea { display: block; width: 100%; min-height: 270px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #0a0f15; color: var(--text); font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; outline: none; }
 textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224,179,.12); }
 .merge-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.raw-import-panel textarea { min-height: 220px; }
 .merge-inputs textarea { min-height: 180px; }
 .merge-output { min-height: 120px; margin-top: 14px; }
 .output-view { display: block; min-height: 270px; margin: 0; overflow: visible; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: #0a0f15; color: var(--text); font: 14px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: text; }

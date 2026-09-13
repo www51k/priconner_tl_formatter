@@ -59,14 +59,26 @@
         </div>
       </section>
 
+      <section class="panel raw-import-panel">
+        <div class="panel-heading">
+          <div><span class="step">02</span><h2>生TL取り込み</h2></div>
+          <span class="hint">ゲーム内・外部サイトから取得した生TLはこちら</span>
+        </div>
+        <textarea id="raw-input" spellcheck="false" placeholder="生TLを貼り付けてください"></textarea>
+        <div class="actions">
+          <button id="send-raw-to-merge" class="button primary" type="button">マージ候補へ送る</button>
+          <span id="raw-status" class="status" role="status"></span>
+        </div>
+      </section>
+
       <section class="panel merge-panel">
         <div class="panel-heading">
           <div><span class="step">03</span><h2>TLマージ確認</h2></div>
-          <span class="hint">差分と競合を確認してから統合方針を決めます</span>
+          <span class="hint">TL A＝生TL、TL B＝手書きTL</span>
         </div>
         <div class="merge-inputs">
-          <textarea id="merge-a" spellcheck="false" placeholder="TL A"></textarea>
-          <textarea id="merge-b" spellcheck="false" placeholder="TL B"></textarea>
+          <textarea id="merge-a" spellcheck="false" placeholder="TL A（生TL）"></textarea>
+          <textarea id="merge-b" spellcheck="false" placeholder="TL B（手書きTL）"></textarea>
         </div>
         <div class="actions">
           <button id="merge" class="button primary" type="button">比較する</button>
@@ -78,7 +90,7 @@
       <section class="panel result-panel">
         <div class="panel-heading">
           <div>
-            <span class="step">02</span>
+            <span class="step">04</span>
             <h2>整形済みTL</h2>
           </div>
           <button id="copy-output" class="button ghost" type="button" disabled>コピー</button>

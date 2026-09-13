@@ -21,6 +21,9 @@ const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
+const rawInput = document.querySelector("#raw-input");
+const sendRawToMerge = document.querySelector("#send-raw-to-merge");
+const rawStatus = document.querySelector("#raw-status");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 
 let pyodidePromise;
@@ -378,6 +381,18 @@ json.dumps(merged, ensure_ascii=False, indent=2)
   } finally {
     mergeButton.disabled = false;
   }
+});
+
+sendRawToMerge.addEventListener("click", () => {
+  if (!rawInput.value.trim()) {
+    rawStatus.textContent = "生TLを入力してください";
+    rawStatus.className = "status error";
+    return;
+  }
+  mergeA.value = rawInput.value;
+  rawStatus.textContent = "TL Aへ設定しました。名寄せ用の編成を確認してください";
+  rawStatus.className = "status ready";
+  mergeA.focus();
 });
 
 restoreFormationCache();
