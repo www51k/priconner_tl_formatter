@@ -165,13 +165,18 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     """
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
-    chosen: dict[tuple[int, str, bool, bool], MergeEvent] = {}
-    for event in events_a:
-        chosen[(event.seconds, event.name, event.arrow, event.manual)] = event
-    for event in events_b:
-        chosen[(event.seconds, event.name, event.arrow, event.manual)] = event
-    events = sorted(chosen.values(), key=lambda event: (-event.seconds, event.order))
-    return {"text": "\n".join(event.raw for event in events), "unresolved": sorted(set(unresolved_a + unresolved_b))}
+    formatted_keys = {(event.seconds, event.name, event.arrow, event.manual) for event in events_b}
+    raw_only = [
+        event for event in events_a
+        if (event.seconds, event.name, event.arrow, event.manual) not in formatted_keys
+    ]
+    # Keep every line from the formatted TL (including headers, SET notes, and
+    # comments), then append only events absent from it from the battle TL.
+    additions = sorted(raw_only, key=lambda event: (-event.seconds, event.order))
+    base = text_b.rstrip()
+    extra = "\n".join(event.raw for event in additions)
+    merged_text = "\n".join(part for part in (base, extra) if part)
+    return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
 def main(argv: list[str] | None = None) -> int:
