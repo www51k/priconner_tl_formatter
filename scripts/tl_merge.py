@@ -166,10 +166,19 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
     formatted_lines = text_b.splitlines()
+
+    def line_seconds(line: str) -> int | None:
+        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
+        return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
+
     formatted_events = sorted(events_b, key=lambda event: event.order)
     blocks: dict[int, list[str]] = {}
     for index, event in enumerate(formatted_events):
         end = formatted_events[index + 1].order if index + 1 < len(formatted_events) else len(formatted_lines)
+        for line_index in range(event.order + 1, end):
+            if line_seconds(formatted_lines[line_index]) is not None:
+                end = line_index
+                break
         blocks[event.order] = formatted_lines[event.order:end]
     formatted_by_key: dict[tuple[int, str], list[MergeEvent]] = {}
     for event in formatted_events:
@@ -202,6 +211,14 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
         merged_lines.extend(formatted_lines[:formatted_events[0].order])
     for _, block in merged_blocks:
         merged_lines.extend(block)
+    for index, line in enumerate(formatted_lines):
+        if index in {event.order for event in formatted_events} or not line.strip():
+            continue
+        if line not in merged_lines and line_seconds(line) is not None:
+            seconds = line_seconds(line)
+            target = next((position for position, merged_line in enumerate(merged_lines)
+                           if (merged_seconds := line_seconds(merged_line)) is not None and merged_seconds < seconds), len(merged_lines))
+            merged_lines.insert(target, line)
     merged_text = "\n".join(merged_lines).rstrip()
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
