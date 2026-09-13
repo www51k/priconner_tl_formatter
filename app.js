@@ -22,6 +22,8 @@ const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
 const mergeEditor = document.querySelector("#merge-editor");
+const battlePreview = document.querySelector("#battle-preview");
+const formattedPreview = document.querySelector("#formatted-preview");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
 const OUTPUT_CACHE_KEY = "priconner_tl_formatter.output.v1";
@@ -105,6 +107,46 @@ function saveMergeCache() {
   }
 }
 
+function renderSourceRows(container, value, draggable) {
+  container.replaceChildren();
+  if (!value) return;
+  value.split("\n").forEach((line, index) => {
+    const row = document.createElement("div");
+    row.className = "merge-source-row";
+    row.dataset.index = String(index);
+    row.draggable = draggable;
+    row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-source-text"></span>${draggable ? '<span class="merge-source-handle" aria-hidden="true">⠿</span>' : ''}`;
+    row.querySelector(".merge-source-text").textContent = line || " ";
+    if (draggable) {
+      row.addEventListener("dragstart", () => {
+        row.classList.add("dragging");
+        formattedPreview.dataset.dragIndex = String(index);
+      });
+      row.addEventListener("dragend", () => row.classList.remove("dragging"));
+      row.addEventListener("dragover", (event) => event.preventDefault());
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const from = Number(formattedPreview.dataset.dragIndex);
+        const to = Number(row.dataset.index);
+        if (!Number.isInteger(from) || from === to) return;
+        const lines = mergeB.value.split("\n");
+        const [moved] = lines.splice(from, 1);
+        lines.splice(to, 0, moved);
+        mergeB.value = lines.join("\n");
+        saveMergeCache();
+        renderSourceRows(battlePreview, mergeA.value, false);
+        renderSourceRows(formattedPreview, mergeB.value, true);
+      });
+    }
+    container.append(row);
+  });
+}
+
+function renderMergeSources() {
+  renderSourceRows(battlePreview, mergeA.value, false);
+  renderSourceRows(formattedPreview, mergeB.value, true);
+}
+
 function restoreMergeCache() {
   try {
     const data = JSON.parse(localStorage.getItem(MERGE_CACHE_KEY) || "null");
@@ -112,6 +154,7 @@ function restoreMergeCache() {
     mergeA.value = typeof data.battle === "string" ? data.battle : "";
     mergeB.value = typeof data.formatted === "string" ? data.formatted : "";
     mergeOutput.value = typeof data.result === "string" ? data.result : "";
+    renderMergeSources();
     renderMergeEditor();
   } catch (_) {
     // 保存データが壊れていても空欄から開始する。
@@ -447,7 +490,9 @@ copyButton.addEventListener("click", async () => {
 });
 
 mergeA.addEventListener("input", saveMergeCache);
+mergeA.addEventListener("input", renderMergeSources);
 mergeB.addEventListener("input", saveMergeCache);
+mergeB.addEventListener("input", renderMergeSources);
 
 mergeButton.addEventListener("click", async () => {
   if (!mergeA.value.trim() || !mergeB.value.trim()) {
