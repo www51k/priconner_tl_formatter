@@ -473,7 +473,7 @@ def render_event(
     if not event.name:
         return event.raw
 
-    prefix = normalize_time_prefix(event.prefix.rstrip(" \t　"))
+    prefix = normalize_time_prefix(event.prefix.strip(" \t　"))
     if event.arrow:
         # 元の🔺などの注記は残し、矢印と名前の間は全角スペース1個にする。
         prefix += "　"
