@@ -165,51 +165,44 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     """
     events_a, unresolved_a = parse_events(text_a, "a", formation)
     events_b, unresolved_b = parse_events(text_b, "b", formation)
+    formatted_lines = text_b.splitlines()
+    formatted_events = sorted(events_b, key=lambda event: event.order)
+    blocks: dict[int, list[str]] = {}
+    for index, event in enumerate(formatted_events):
+        end = formatted_events[index + 1].order if index + 1 < len(formatted_events) else len(formatted_lines)
+        blocks[event.order] = formatted_lines[event.order:end]
     formatted_by_key: dict[tuple[int, str], list[MergeEvent]] = {}
-    battle_keys = {(event.seconds, event.name) for event in events_a}
-    for event in events_b:
+    for event in formatted_events:
         formatted_by_key.setdefault((event.seconds, event.name), []).append(event)
 
-    # The battle TL is authoritative for order. Use the formatted row when the
-    # same second and character exist there, preserving its annotations.
-    merged_events: list[MergeEvent] = []
+    # Battle events define the order; a matching formatted block supplies all
+    # following arrows, notes, SET masks, and comments until the next event.
+    merged_blocks: list[tuple[int, list[str]]] = []
     used_formatted: set[int] = set()
     for battle_event in events_a:
         candidates = formatted_by_key.get((battle_event.seconds, battle_event.name), [])
         formatted_event = next((item for item in candidates if item.order not in used_formatted), None)
         if formatted_event is not None:
-            merged_events.append(formatted_event)
+            merged_blocks.append((battle_event.seconds, blocks[formatted_event.order]))
             used_formatted.add(formatted_event.order)
         else:
-            merged_events.append(battle_event)
+            merged_blocks.append((battle_event.seconds, [battle_event.raw]))
 
-    # Formatted-only rows are inserted by timestamp without changing battle
-    # row order. Non-event formatted lines are retained after the timeline.
-    formatted_only = [event for event in events_b if event.order not in used_formatted and (event.seconds, event.name) not in battle_keys]
-    for extra in sorted(formatted_only, key=lambda event: (-event.seconds, event.order)):
-        target = next((index for index, event in enumerate(merged_events) if event.seconds < extra.seconds), len(merged_events))
-        merged_events.insert(target, extra)
-    merged_lines = [event.raw for event in merged_events]
-    event_line_numbers = {event.order for event in events_b}
-    formatted_lines = text_b.splitlines()
-
-    def line_seconds(line: str) -> int | None:
-        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
-        return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
-
-    metadata = [(line_seconds(line), line) for index, line in enumerate(formatted_lines) if index not in event_line_numbers and line.strip()]
-    for seconds, line in metadata:
-        if seconds is None:
-            merged_lines.append(line)
+    # Add formatted-only blocks at their timestamp without changing battle
+    # event order.
+    for event in formatted_events:
+        if event.order in used_formatted:
             continue
-        target = len(merged_lines)
-        for index, merged_line in enumerate(merged_lines):
-            merged_seconds = line_seconds(merged_line)
-            if merged_seconds is not None and merged_seconds < seconds:
-                target = index
-                break
-        merged_lines.insert(target, line)
-    merged_text = "\n".join(merged_lines)
+        block = blocks[event.order]
+        target = next((index for index, (seconds, _) in enumerate(merged_blocks) if seconds < event.seconds), len(merged_blocks))
+        merged_blocks.insert(target, (event.seconds, block))
+
+    merged_lines = []
+    if formatted_events:
+        merged_lines.extend(formatted_lines[:formatted_events[0].order])
+    for _, block in merged_blocks:
+        merged_lines.extend(block)
+    merged_text = "\n".join(merged_lines).rstrip()
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
