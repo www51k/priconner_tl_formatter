@@ -89,7 +89,12 @@
             <button id="merge" class="button primary" type="button">マージする</button>
             <span id="merge-status" class="status" role="status"></span>
           </div>
-          <label class="merge-field merge-result-field">下：マージ後TL<textarea id="merge-output" class="output-view merge-output" aria-label="マージ後TL" readonly></textarea></label>
+          <div class="merge-field merge-result-field">
+            <span>下：マージ後TL</span>
+            <div id="merge-editor" class="merge-editor" aria-label="マージ後TL（行をドラッグして並べ替え）"></div>
+            <textarea id="merge-output" class="merge-output-storage" aria-hidden="true" tabindex="-1" readonly></textarea>
+            <div class="merge-editor-help">行をドラッグして順番を調整できます</div>
+          </div>
       </section>
 
       <footer>
@@ -97,6 +102,6 @@
         <span>tl-formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=20260913-merge-texts-4"></script>
+    <script type="module" src="app.js?v=20260913-drag-rows-1"></script>
   </body>
 </html>

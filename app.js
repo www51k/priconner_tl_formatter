@@ -21,6 +21,7 @@ const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
+const mergeEditor = document.querySelector("#merge-editor");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
 const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
 const OUTPUT_CACHE_KEY = "priconner_tl_formatter.output.v1";
@@ -111,9 +112,43 @@ function restoreMergeCache() {
     mergeA.value = typeof data.battle === "string" ? data.battle : "";
     mergeB.value = typeof data.formatted === "string" ? data.formatted : "";
     mergeOutput.value = typeof data.result === "string" ? data.result : "";
+    renderMergeEditor();
   } catch (_) {
     // 保存データが壊れていても空欄から開始する。
   }
+}
+
+function renderMergeEditor() {
+  mergeEditor.replaceChildren();
+  const lines = mergeOutput.value.split("\n");
+  if (!mergeOutput.value) return;
+  lines.forEach((line, index) => {
+    const row = document.createElement("div");
+    row.className = "merge-editor-row";
+    row.draggable = true;
+    row.dataset.index = String(index);
+    row.innerHTML = `<span class="merge-editor-handle" aria-hidden="true">⠿</span><span class="merge-editor-number">${index + 1}</span><span class="merge-editor-text"></span>`;
+    row.querySelector(".merge-editor-text").textContent = line || " ";
+    row.addEventListener("dragstart", () => {
+      row.classList.add("dragging");
+      mergeEditor.dataset.dragIndex = String(index);
+    });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
+    row.addEventListener("dragover", (event) => event.preventDefault());
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      const from = Number(mergeEditor.dataset.dragIndex);
+      const to = Number(row.dataset.index);
+      if (!Number.isInteger(from) || from === to) return;
+      const reordered = [...mergeOutput.value.split("\n")];
+      const [moved] = reordered.splice(from, 1);
+      reordered.splice(to, 0, moved);
+      mergeOutput.value = reordered.join("\n");
+      saveMergeCache();
+      renderMergeEditor();
+    });
+    mergeEditor.append(row);
+  });
 }
 
 function updateSlotNumbers() {
@@ -436,6 +471,7 @@ json.dumps(merged, ensure_ascii=False)
     const data = JSON.parse(result);
     mergeOutput.value = data.text;
     saveMergeCache();
+    renderMergeEditor();
     mergeStatus.textContent = data.unresolved.length ? `マージ完了・要確認（${data.unresolved.join("、")}）` : "マージ完了";
     mergeStatus.className = "status ready";
   } catch (error) {
