@@ -481,8 +481,10 @@ def render_event(
         prefix += "　"
 
     display_name = (display_names or DISPLAY_NAMES).get(event.name, event.name)
+    # 正式名・内部名は保持し、出力欄だけ最大4文字に収める。
+    # 未登録キャラや新ボス名でも整形処理を止めない。
     if len(display_name) > 4 and not allow_long_name:
-        raise ValueError(f"表示名が全角4文字を超えています。4文字略称を登録してください: {event.name}")
+        display_name = display_name[:4]
     name_field = display_name + "　" * max(0, 4 - len(display_name))
     rest = event.raw[event.raw.find(event.name) + len(event.name):]
     # 先頭のSETマスクだけを取り出し、備考中の追加マスクは保持する。

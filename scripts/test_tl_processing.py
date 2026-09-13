@@ -425,6 +425,10 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("1:30　ミストシーカー", result)
         self.assertIn("1:20　アオイ", result)
 
+    def test_long_display_name_is_truncated_to_four_characters(self) -> None:
+        result = format_text("[(5)長いキャラ名前|(4)ネラ|(3)ツムギ|(2)ペコ|(1)シェフィ]\n1:10　長いキャラ名前\n")
+        self.assertIn("1:10　長いキ", result)
+
     def test_enemy_labels_inside_comments_are_preserved(self) -> None:
         formatted = format_text("1:12　アオイ　''敵 敵UB\n1:11　アオイ　// 敵 敵UB\n")
         self.assertIn("''敵 敵UB", formatted)
