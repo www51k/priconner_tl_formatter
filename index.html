@@ -81,17 +81,17 @@
         <section class="panel merge-panel late-stage-content">
           <div class="panel-heading">
             <div><span class="step">03</span><h2>TLマージ確認</h2></div>
-            <span class="merge-direction">左：バトルTL　｜　右：整形済みTL　｜　下：マージ後TL</span>
+            <span class="merge-direction">マージ元を左右に入力して、1本のTLに結合します</span>
           </div>
           <div class="merge-inputs">
-            <textarea id="merge-a" spellcheck="false" placeholder="バトルTL"></textarea>
-            <textarea id="merge-b" spellcheck="false" placeholder="整形済みTL"></textarea>
+            <label class="merge-field">左：バトルTL<textarea id="merge-a" spellcheck="false" placeholder="バトルTL"></textarea></label>
+            <label class="merge-field">右：整形済みTL<textarea id="merge-b" spellcheck="false" placeholder="整形済みTL"></textarea></label>
           </div>
           <div class="actions">
             <button id="merge" class="button primary" type="button">マージする</button>
             <span id="merge-status" class="status" role="status"></span>
           </div>
-          <textarea id="merge-output" class="output-view merge-output" aria-label="マージ後TL" readonly></textarea>
+          <label class="merge-field merge-result-field">下：マージ後TL<textarea id="merge-output" class="output-view merge-output" aria-label="マージ後TL" readonly></textarea></label>
         </section>
       </details>
 
