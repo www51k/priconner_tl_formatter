@@ -118,6 +118,13 @@ function renderSourceRows(container, value, draggable) {
     row.draggable = draggable;
     row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-source-text" role="gridcell"></span>${draggable ? '<span class="merge-source-handle" aria-hidden="true">⠿</span>' : ''}`;
     row.querySelector(".merge-source-text").textContent = line || " ";
+    if (!draggable) {
+      row.addEventListener("dragover", (event) => event.preventDefault());
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        replaceBattleRow(Number(formattedPreview.dataset.dragIndex), index);
+      });
+    }
     if (draggable) {
       row.addEventListener("dragstart", () => {
         row.classList.add("dragging");
@@ -146,9 +153,35 @@ function appendInsertZone(container, index, draggable) {
   zone.addEventListener("drop", (event) => {
     event.preventDefault();
     if (draggable) moveFormattedRow(Number(formattedPreview.dataset.dragIndex), index);
+    else insertFormattedIntoBattle(Number(formattedPreview.dataset.dragIndex), index);
   });
   if (!draggable) zone.addEventListener("click", () => insertBattleRow(index));
   container.append(zone);
+}
+
+function formattedLineAt(index) {
+  const lines = mergeB.value.split("\n");
+  return Number.isInteger(index) && index >= 0 && index < lines.length ? lines[index] : null;
+}
+
+function replaceBattleRow(formattedIndex, battleIndex) {
+  const line = formattedLineAt(formattedIndex);
+  const lines = mergeA.value.split("\n");
+  if (line === null || !Number.isInteger(battleIndex) || battleIndex < 0 || battleIndex >= lines.length) return;
+  lines[battleIndex] = line;
+  mergeA.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
+}
+
+function insertFormattedIntoBattle(formattedIndex, battleIndex) {
+  const line = formattedLineAt(formattedIndex);
+  const lines = mergeA.value.split("\n");
+  if (line === null || !Number.isInteger(battleIndex)) return;
+  lines.splice(Math.max(0, Math.min(battleIndex, lines.length)), 0, line);
+  mergeA.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
 }
 
 function insertBattleRow(index) {
