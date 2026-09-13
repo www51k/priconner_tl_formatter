@@ -42,6 +42,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .raw-import-panel textarea { min-height: 220px; }
 .merge-inputs textarea { min-height: 180px; }
 .merge-output { min-height: 120px; margin-top: 14px; }
+.merge-direction { color: var(--accent); font-size: .9rem; font-weight: 800; letter-spacing: .04em; }
 .late-stage-panel { margin-bottom: 18px; }
 .late-stage-panel > summary { cursor: pointer; list-style: none; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; background: rgba(22,29,39,.72); color: var(--text); font-weight: 700; }
 .late-stage-panel > summary::before { content: "＋"; color: var(--accent); margin-right: 8px; }

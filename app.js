@@ -299,8 +299,6 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
     output.textContent = addSetOperations.checked && Number(carryoverTime.value) >= 90
       ? ensureInitialSet(data.text)
       : data.text;
-    mergeA.value = source;
-    mergeB.value = output.textContent;
     copyButton.disabled = false;
     if (data.review.length) {
       reviewContent.textContent = data.review.map((item) =>
