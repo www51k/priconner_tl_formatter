@@ -516,6 +516,16 @@ class TlProcessingTests(unittest.TestCase):
         formatted = format_text("⭐️1:00-0:59　''※シオリSET\n[543-1]\n")
         self.assertIn("[543-1]", formatted)
 
+    def test_time_range_variants_never_create_a_character_event(self) -> None:
+        for value in ("1:00-0:59", "1:00-00:59", "⭐️1:00-00　:59"):
+            formatted = format_text(f"{value}　''※シオリSET\n")
+            self.assertIn("SET", formatted)
+            self.assertNotIn("[54321]", formatted)
+
+    def test_boss_names_are_normalized_from_the_synced_list(self) -> None:
+        from tl_common import BOSS_NAMES
+        self.assertTrue({"ミストシーカー", "メデューサ"}.issubset(BOSS_NAMES))
+
     def test_carryover_shifts_time_range_as_a_range(self) -> None:
         formatted = format_text("1:00-0:59　シオリ\n", carryover_seconds=60)
         self.assertIn("0:30-29", formatted)

@@ -16,6 +16,26 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_arrow_expansion_keeps_each_target_as_independent_event(self):
+        events, unresolved = parse_events(
+            expand_arrow_times("0:40　すみれ\n　　　→　ティア\n　　　→　シオリ"),
+            "b",
+            ["すみれ", "ティア", "シオリ"],
+        )
+        self.assertEqual(unresolved, [])
+        self.assertEqual([event.seconds for event in events], [40, 40, 40])
+        self.assertEqual([event.name for event in events], ["すみれ", "ティア", "シオリ"])
+
+    def test_same_second_events_are_not_sorted_lexically(self):
+        result = merge_texts(
+            "0:40 ヴァイオレット\n0:40 ティア\n0:40 シオリ\n0:40 タマキ",
+            "0:40 すみれ\n0:40 ティア\n0:40 シオリ\n0:40 タマキ",
+            ["すみれ", "ティア", "シオリ", "タマキ"],
+        )
+        text = result["text"]
+        self.assertLess(text.index("すみれ"), text.index("ティア"))
+        self.assertLess(text.index("ティア"), text.index("シオリ"))
+        self.assertLess(text.index("シオリ"), text.index("タマキ"))
     def test_formal_and_alias_resolve_to_one_canonical_character_name(self):
         events, unresolved = parse_events(
             "0:40 ヴァイオレット\n0:39 すみれ", "a", ["すみれ"]
