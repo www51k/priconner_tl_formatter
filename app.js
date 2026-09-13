@@ -627,7 +627,7 @@ async function loadPython() {
         return response.text();
       });
       pyodide.FS.writeFile("/home/pyodide/character_master.json", master);
-      const aliases = await fetch("data/character_aliases.json?v=20260913-sheet-aliases").then((response) => {
+      const aliases = await fetch("data/character_aliases.json?v=20260913-sheet-aliases-v2").then((response) => {
         if (!response.ok) throw new Error("data/character_aliases.json の読み込みに失敗しました");
         return response.text();
       });
