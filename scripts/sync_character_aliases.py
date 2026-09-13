@@ -32,7 +32,11 @@ def build_aliases(csv_text: str) -> dict[str, dict[str, str]]:
         formal, short = row[1].strip(), row[2].strip()
         if formal and short and formal != short:
             aliases[formal] = short
-    return {"character_aliases": dict(sorted(aliases.items())), "learned_name_aliases": {}}
+    # 旧TLで使われていた表記も、シートの正式な略称へ寄せる。
+    return {
+        "character_aliases": dict(sorted(aliases.items())),
+        "learned_name_aliases": {"スミレ": "すみれ"},
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
