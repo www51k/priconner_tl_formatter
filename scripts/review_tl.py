@@ -8,7 +8,7 @@ import json
 import re
 from pathlib import Path
 
-from tl_common import CHAR_NUMBERS, MASK_RE, character_names_from_formation, parse_event
+from tl_common import MASK_RE, character_names_from_formation, parse_event
 from validate_tl import validate
 
 
@@ -47,7 +47,6 @@ def collect_review_items(
                     "reason": "発動行のキャラ名を機械解析できません",
                 })
         original_line = original_lines[line_no - 1] if line_no <= len(original_lines) else ""
-        original_event = parse_event(line_no, original_line, character_names)
         original_auto_on = (
             "🅰️ON" in original_line
             or re.search(r"(?:オート|AUTO)[ \t　]*(?:ON|オン)", original_line, re.IGNORECASE)

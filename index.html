@@ -86,9 +86,12 @@
             <label class="merge-field">左：バトルTL<textarea id="merge-a" spellcheck="false" placeholder="バトルTL"></textarea></label>
             <label class="merge-field">右：整形済みTL<textarea id="merge-b" spellcheck="false" placeholder="整形済みTL"></textarea></label>
           </div>
+          <div class="actions">
+            <button id="merge" class="button primary" type="button">マージする</button>
+            <span id="merge-status" class="status" role="status"></span>
+          </div>
           <div class="merge-stage-title">行をセル化してドラッグ</div>
           <div class="merge-operation-help">右の行を左の行へドロップ：上書き　｜　左の「＋ ここへ挿入」へドロップ：挿入</div>
-          <div id="merge-lane" class="merge-lane" aria-label="単一タイムライン形式のマージ操作"></div>
           <div id="merge-lane" class="merge-lane" aria-label="単一タイムライン形式のマージ操作"></div>
           <div class="merge-source-board" aria-label="マージ元の行プレビュー">
             <div class="merge-source-pane">
@@ -100,12 +103,11 @@
               <div id="formatted-preview" class="merge-source-rows" role="grid" aria-label="整形済みTLの行"></div>
             </div>
           </div>
-          <div class="actions">
-            <button id="merge" class="button primary" type="button">マージする</button>
-            <span id="merge-status" class="status" role="status"></span>
-          </div>
           <div class="merge-field merge-result-field">
-            <div class="merge-stage-title">マージ後</div>
+            <div class="panel-heading">
+              <div><span class="merge-stage-title">マージ後TL</span></div>
+              <button id="copy-merge-output" class="button ghost" type="button" disabled>コピー</button>
+            </div>
             <div id="merge-editor" class="merge-editor" aria-label="マージ後TL（行をドラッグして並べ替え）"></div>
             <textarea id="merge-output" class="merge-output-storage" aria-hidden="true" tabindex="-1" readonly></textarea>
             <div class="merge-editor-help">行をドラッグして順番を調整できます</div>
@@ -117,6 +119,6 @@
         <span>tl-formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=20260913-merge-lane-5"></script>
+    <script type="module" src="app.js?v=20260913-json-aliases"></script>
   </body>
 </html>

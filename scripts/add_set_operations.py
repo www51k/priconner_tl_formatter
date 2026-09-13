@@ -7,19 +7,20 @@
 from __future__ import annotations
 
 import argparse
+from itertools import pairwise
 import re
 from dataclasses import replace
 from pathlib import Path
 
 from tl_common import (
+    DISPLAY_NAMES,
+    MASK_RE,
     TIME_TOKEN_RE,
+    character_names_from_formation,
     mask_for,
     numbers_from_mask,
     parse_event,
-    character_names_from_formation,
     render_event,
-    MASK_RE,
-    DISPLAY_NAMES,
 )
 
 
@@ -448,7 +449,7 @@ def compact_forward_set_operations(text: str) -> str:
     while changed:
         changed = False
         indexes = mask_indexes()
-        for left, right in zip(indexes, indexes[1:]):
+        for left, right in pairwise(indexes):
             left_match = MASK_RE.search(lines[left])
             right_match = MASK_RE.search(lines[right])
             if not left_match or not right_match:

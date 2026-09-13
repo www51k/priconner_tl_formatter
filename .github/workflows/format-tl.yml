@@ -6,7 +6,7 @@ on:
       input_file:
         description: "整形するTLファイル（リポジトリルートからの相対パス）"
         required: true
-        default: "202608_1b58000_16.txt"
+        default: "tl/source/202608_1b58000_16.org"
         type: string
 
 permissions:

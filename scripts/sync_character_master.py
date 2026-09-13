@@ -13,7 +13,6 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-
 DEFAULT_SPREADSHEET_ID = "1S2AOOnx6_Wk95atC_s0Rimeo1YPyYxaegQj8dCovjt4"
 DEFAULT_GID = "1793615076"
 

@@ -11,13 +11,40 @@ import json
 import re
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
-from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+def _load_aliases() -> tuple[dict, dict]:
+    candidates = [
+        Path("/home/pyodide/character_aliases.json"),
+        Path(__file__).resolve().parent.parent / "data" / "character_aliases.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            return payload.get("character_aliases", {}), payload.get("learned_name_aliases", {})
+    from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+    return CHARACTER_ALIASES, LEARNED_NAME_ALIASES
 
-try:
-    from character_master import CHARACTER_MASTER
-except ImportError:  # Local source checkout before the first sync.
-    CHARACTER_MASTER = {}
+
+CHARACTER_ALIASES, LEARNED_NAME_ALIASES = _load_aliases()
+
+def _load_character_master() -> dict:
+    candidates = [
+        Path("/home/pyodide/character_master.json"),
+        Path(__file__).resolve().parent.parent / "data" / "character_master.json",
+        Path(__file__).resolve().parent / "character_master.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        from character_master import CHARACTER_MASTER
+    except ImportError:  # Local source checkout before the first sync.
+        return {}
+    return CHARACTER_MASTER
+
+
+CHARACTER_MASTER = _load_character_master()
 
 
 TIME_LINE_RE = re.compile(

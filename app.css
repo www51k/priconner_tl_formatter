@@ -56,7 +56,6 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .merge-lane-insert { min-height: 10px; color: transparent; text-align: center; font-size: 11px; cursor: copy; }
 .merge-lane-insert:hover { color: var(--accent); outline: 1px dashed var(--accent); }
 .merge-inputs textarea { min-height: 180px; }
-.merge-source-board { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
 .merge-source-board { display: none; }
 .merge-source-pane { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: rgba(10,15,21,.72); }
 .merge-source-title { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: var(--text); font-size: .83rem; font-weight: 800; }

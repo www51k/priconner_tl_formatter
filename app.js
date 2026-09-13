@@ -21,6 +21,7 @@ const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
+const mergeCopyButton = document.querySelector("#copy-merge-output");
 const mergeEditor = document.querySelector("#merge-editor");
 const battlePreview = document.querySelector("#battle-preview");
 const formattedPreview = document.querySelector("#formatted-preview");
@@ -165,6 +166,68 @@ function formattedLineAt(index) {
   return Number.isInteger(index) && index >= 0 && index < lines.length ? lines[index] : null;
 }
 
+function timelineBlockAt(text, index) {
+  const lines = text.split("\n");
+  if (!Number.isInteger(index) || index < 0 || index >= lines.length) return null;
+  let start = index;
+  while (start > 0 && !/(\d{1,2}):(\d{2})/.test(lines[start])) start -= 1;
+  let end = start + 1;
+  while (end < lines.length && !/(\d{1,2}):(\d{2})/.test(lines[end])) end += 1;
+  return { start, end, lines: lines.slice(start, end) };
+}
+
+function normalizeBattleNames(text) {
+  return text.split("\n").map((line) => {
+    const match = line.match(/^(\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?\d{1,2}:\d{2}\s+)([^　 \[→➡︎➡⇨⇒>]+)(.*)$/);
+    if (!match) return line;
+    const name = match[2].replace(/[（(].*$/, "").split("＝").pop();
+    return `${match[1]}${name}${match[3]}`;
+  }).join("\n");
+}
+
+function removeArrowDuplicates(text, formatted) {
+  const arrowKeys = new Set();
+  let currentSeconds = null;
+  formatted.split("\n").forEach((line) => {
+    const timed = line.match(/(\d{1,2}):(\d{2})/);
+    if (timed) currentSeconds = Number(timed[1]) * 60 + Number(timed[2]);
+    if (currentSeconds === null || !/→|➡|⇨|⇒|->|>/.test(line)) return;
+    const name = line.replace(/^.*?(?:→|➡︎|➡|⇨|⇒|->|>)\s*/, "").trim().split(/[　 \[]/, 1)[0]
+      .replace(/[（(].*$/, "").split("＝").pop();
+    if (name) arrowKeys.add(`${currentSeconds}:${name}`);
+  });
+  let seconds = null;
+  return text.split("\n").filter((line) => {
+    const timed = line.match(/(\d{1,2}):(\d{2})/);
+    if (timed) seconds = Number(timed[1]) * 60 + Number(timed[2]);
+    if (seconds === null || /→|➡|⇨|⇒|->|>/.test(line)) return true;
+    const name = line.replace(/^.*?\d{1,2}:\d{2}/, "").trim().split(/[　 \[]/, 1)[0]
+      .replace(/[（(].*$/, "").split("＝").pop();
+    return !arrowKeys.has(`${seconds}:${name}`);
+  }).join("\n");
+}
+
+function replaceBattleBlock(formattedIndex, battleIndex) {
+  const formatted = timelineBlockAt(mergeB.value, formattedIndex);
+  const battle = timelineBlockAt(mergeA.value, battleIndex);
+  if (!formatted || !battle) return;
+  const lines = mergeA.value.split("\n");
+  lines.splice(battle.start, battle.end - battle.start, ...formatted.lines);
+  mergeA.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
+}
+
+function insertFormattedBlock(formattedIndex, battleIndex) {
+  const formatted = timelineBlockAt(mergeB.value, formattedIndex);
+  const lines = mergeA.value.split("\n");
+  if (!formatted || !Number.isInteger(battleIndex)) return;
+  lines.splice(Math.max(0, Math.min(battleIndex, lines.length)), 0, ...formatted.lines);
+  mergeA.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
+}
+
 function replaceBattleRow(formattedIndex, battleIndex) {
   const line = formattedLineAt(formattedIndex);
   const lines = mergeA.value.split("\n");
@@ -230,58 +293,82 @@ function renderMergeLane() {
   mergeLane.replaceChildren();
   const battle = mergeA.value.split("\n");
   const source = mergeB.value.split("\n");
+  const blocks = (lines) => {
+    const result = [];
+    lines.forEach((line, index) => {
+      if (/(\d{1,2}):(\d{2})/.test(line) || !result.length) result.push({ start: index, lines: [line] });
+      else result[result.length - 1].lines.push(line);
+    });
+    return result;
+  };
+  const battleBlocks = blocks(battle);
+  const sourceBlocks = blocks(source);
   const key = (line) => {
     const time = line.match(/(\d{1,2}):(\d{2})/);
     if (!time) return null;
-    const name = line.replace(/^.*?\d{1,2}:\d{2}/, "").trim().split(/[　 \[（(]/, 1)[0];
+    let name = line.replace(/^.*?\d{1,2}:\d{2}/, "").trim().split(/[　 \[]/, 1)[0];
+    name = name.replace(/[（(].*$/, "").split("＝").pop();
     return `${Number(time[1]) * 60 + Number(time[2])}:${name}`;
   };
   const secondsOf = (line) => { const value = line.match(/(\d{1,2}):(\d{2})/); return value ? Number(value[1]) * 60 + Number(value[2]) : null; };
   const formattedByKey = new Map();
-  source.forEach((line, index) => { const value = key(line); if (value) formattedByKey.set(value, { line, index }); });
-  const matched = new Set();
+  sourceBlocks.forEach((block) => {
+    const timed = block.lines.find((line) => secondsOf(line) !== null) || "";
+    const value = key(timed);
+    if (value) {
+      formattedByKey.set(value, { block, line: timed });
+      const seconds = secondsOf(timed);
+      block.lines.forEach((line) => {
+        if (!/→|➡|⇨|⇒|->|>/.test(line)) return;
+        const arrowName = line.replace(/^.*?(?:→|➡︎|➡|⇨|⇒|->|>)\s*/, "").trim().split(/[　 \[]/, 1)[0]
+          .replace(/[（(].*$/, "").split("＝").pop();
+        if (arrowName) formattedByKey.set(`${seconds}:${arrowName}`, { block, line });
+      });
+    }
+  });
   const title = document.createElement("div");
   title.className = "merge-lane-title";
   title.textContent = "整形済みTLの行を下のバトルTL行へドラッグ";
   mergeLane.append(title);
   const unmatched = [];
-  source.forEach((line, index) => {
+  sourceBlocks.forEach((block) => {
     const card = document.createElement("div");
     card.className = "merge-lane-card formatted-card";
     card.draggable = true;
-    card.dataset.index = String(index);
-    card.textContent = line || " ";
-    card.addEventListener("dragstart", () => { mergeLane.dataset.dragIndex = String(index); card.classList.add("dragging"); });
+    card.dataset.index = String(block.start);
+    card.textContent = block.lines.join("\n") || " ";
+    card.addEventListener("dragstart", () => { mergeLane.dataset.dragIndex = String(block.start); card.classList.add("dragging"); });
     card.addEventListener("dragend", () => card.classList.remove("dragging"));
-    const value = key(line);
-    card.hidden = Boolean(value && battle.some((battleLine) => key(battleLine) === value));
-    if (!card.hidden && value && secondsOf(line) !== null) unmatched.push({ card, seconds: secondsOf(line) });
+    const timed = block.lines.find((line) => secondsOf(line) !== null) || "";
+    const value = key(timed);
+    card.hidden = Boolean(value && battle.some((battleLine) => formattedByKey.get(key(battleLine))?.block === block));
+    if (!card.hidden && value && secondsOf(timed) !== null) unmatched.push({ card, seconds: secondsOf(timed) });
   });
   const timeline = document.createElement("div");
   timeline.className = "merge-lane-timeline";
   const battleRows = [];
-  battle.forEach((line, index) => {
+  battleBlocks.forEach((block, index) => {
+    const line = block.lines[0];
+    const formatted = formattedByKey.get(key(line));
     const row = document.createElement("div");
     row.className = "merge-lane-row";
     row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-lane-text"></span>`;
     row.querySelector(".merge-lane-text").textContent = line || " ";
-    const formatted = formattedByKey.get(key(line));
     if (formatted) {
-      matched.add(formatted.index);
       const detail = document.createElement("span");
       detail.className = "merge-lane-match";
       detail.textContent = `整形済み: ${formatted.line}`;
       row.append(detail);
     }
     row.addEventListener("dragover", (event) => event.preventDefault());
-    row.addEventListener("drop", (event) => { event.preventDefault(); replaceBattleRow(Number(mergeLane.dataset.dragIndex), index); });
+    row.addEventListener("drop", (event) => { event.preventDefault(); replaceBattleBlock(Number(mergeLane.dataset.dragIndex), block.start); });
     timeline.append(row);
     battleRows.push({ row, seconds: secondsOf(line) });
     const insert = document.createElement("div");
     insert.className = "merge-lane-insert";
     insert.textContent = "＋ ここへ挿入";
     insert.addEventListener("dragover", (event) => event.preventDefault());
-    insert.addEventListener("drop", (event) => { event.preventDefault(); insertFormattedIntoBattle(Number(mergeLane.dataset.dragIndex), index + 1); });
+    insert.addEventListener("drop", (event) => { event.preventDefault(); insertFormattedBlock(Number(mergeLane.dataset.dragIndex), block.end); });
     timeline.append(insert);
   });
   unmatched.forEach(({ card, seconds }) => {
@@ -535,6 +622,16 @@ async function loadPython() {
         });
         pyodide.FS.writeFile(`/home/pyodide/scripts/${name}`, source);
       }
+      const master = await fetch("data/character_master.json?v=20260913-json-master").then((response) => {
+        if (!response.ok) throw new Error("data/character_master.json の読み込みに失敗しました");
+        return response.text();
+      });
+      pyodide.FS.writeFile("/home/pyodide/character_master.json", master);
+      const aliases = await fetch("data/character_aliases.json?v=20260913-json-aliases").then((response) => {
+        if (!response.ok) throw new Error("data/character_aliases.json の読み込みに失敗しました");
+        return response.text();
+      });
+      pyodide.FS.writeFile("/home/pyodide/character_aliases.json", aliases);
       await pyodide.runPythonAsync(`
 import sys
 sys.path.insert(0, "/home/pyodide/scripts")
@@ -636,6 +733,11 @@ copyButton.addEventListener("click", async () => {
   copyButton.textContent = "コピーしました";
   setTimeout(() => { copyButton.textContent = "コピー"; }, 1400);
 });
+mergeCopyButton.addEventListener("click", async () => {
+  await navigator.clipboard.writeText(mergeOutput.value);
+  mergeCopyButton.textContent = "コピーしました";
+  setTimeout(() => { mergeCopyButton.textContent = "コピー"; }, 1400);
+});
 
 mergeA.addEventListener("input", saveMergeCache);
 mergeA.addEventListener("input", renderMergeSources);
@@ -651,6 +753,9 @@ mergeButton.addEventListener("click", async () => {
   try {
     const formation = [...formationList.querySelectorAll("input")].map((field) => field.value.trim()).filter(Boolean);
     if (formation.length !== 5) throw new Error("編成を5人入力してください");
+    mergeA.value = normalizeBattleNames(mergeA.value);
+    saveMergeCache();
+    renderMergeSources();
     mergeButton.disabled = true;
     const pyodide = await loadPython();
     pyodide.globals.set("merge_text_a", mergeA.value);
@@ -662,7 +767,10 @@ merged = merge_texts(merge_text_a, merge_text_b, merge_formation)
 json.dumps(merged, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    mergeOutput.value = data.text;
+    const mergedText = removeArrowDuplicates(data.text, mergeB.value);
+    pyodide.globals.set("merged_text_for_format", mergedText);
+    mergeOutput.value = await pyodide.runPythonAsync("format_text(merged_text_for_format)");
+    mergeCopyButton.disabled = !mergeOutput.value;
     saveMergeCache();
     renderMergeEditor();
     mergeStatus.textContent = data.unresolved.length ? `マージ完了・要確認（${data.unresolved.join("、")}）` : "マージ完了";

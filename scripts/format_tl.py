@@ -290,7 +290,7 @@ def format_text(text: str, carryover_seconds: int = 90) -> str:
                 if event.star and same_time:
                     # 同時刻の⭐️行は手動UB記号を残し、時刻を重複させず
                     # 矢印連鎖の続きとして表示する。
-                    event = replace(event, prefix=f"⭐️　　→", arrow=True)
+                    event = replace(event, prefix="⭐️　　→", arrow=True)
                 else:
                     event = replace(event, prefix=f"{arrow_indent}→", arrow=True)
             elif event.arrow and not event.star:
