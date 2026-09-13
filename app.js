@@ -115,14 +115,8 @@ function renderSourceRows(container, value, draggable) {
     row.className = "merge-source-row";
     row.dataset.index = String(index);
     row.draggable = draggable;
-    row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-source-text" contenteditable="true" role="gridcell" spellcheck="false"></span>${draggable ? '<span class="merge-source-handle" aria-hidden="true">⠿</span>' : ''}`;
+    row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-source-text" role="gridcell"></span>${draggable ? '<span class="merge-source-handle" aria-hidden="true">⠿</span>' : ''}`;
     row.querySelector(".merge-source-text").textContent = line || " ";
-    row.querySelector(".merge-source-text").addEventListener("input", () => {
-      const lines = [...container.querySelectorAll(".merge-source-text")].map((cell) => cell.textContent === " " ? "" : cell.textContent);
-      if (container === battlePreview) mergeA.value = lines.join("\n");
-      else mergeB.value = lines.join("\n");
-      saveMergeCache();
-    });
     if (draggable) {
       row.addEventListener("dragstart", () => {
         row.classList.add("dragging");
