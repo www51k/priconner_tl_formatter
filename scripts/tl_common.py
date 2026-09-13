@@ -7,7 +7,22 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+def _load_aliases() -> tuple[dict[str, str], dict[str, str]]:
+    for path in (Path("/home/pyodide/character_aliases.json"), Path(__file__).resolve().parent.parent / "data" / "character_aliases.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            # 学習済みの短縮表記はシートの正式名/略称とは別系統なので維持する。
+            from character_aliases import LEARNED_NAME_ALIASES
+            learned = dict(LEARNED_NAME_ALIASES)
+            learned.update(payload.get("learned_name_aliases", {}))
+            return payload.get("character_aliases", {}), learned
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+    from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+    return CHARACTER_ALIASES, LEARNED_NAME_ALIASES
+
+
+CHARACTER_ALIASES, LEARNED_NAME_ALIASES = _load_aliases()
 
 CHARACTERS = ("アオイ", "ネラ", "ツムギ", "ペコ", "シェフィ")
 # 時刻付きで記録されることがあるボス名。キャラ候補から除外する。

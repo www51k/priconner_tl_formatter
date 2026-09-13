@@ -26,6 +26,10 @@ class TlProcessingTests(unittest.TestCase):
     reference_source = ROOT / "tl" / "source" / "202608_1b58000_16.org"
     reference_output = ROOT / "tl" / "generated" / "202608_1b58000_16.txt"
 
+    def test_battle_tl_formal_character_name_uses_sheet_alias(self) -> None:
+        self.assertIn("すみれ", format_text("1:06　ヴァイオレット\n"))
+        self.assertNotIn("ヴァイオレット", format_text("1:06　ヴァイオレット\n"))
+
     def test_carryover_default_keeps_original_times(self) -> None:
         source = "1:20　アオイ　// 1:20のメモ\n"
         self.assertEqual(shift_tl_times(source), source)
