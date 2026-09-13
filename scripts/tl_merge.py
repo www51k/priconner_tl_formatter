@@ -173,15 +173,19 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     # Insert battle-only rows immediately before the first formatted event
     # with a smaller timestamp, rather than appending them at the end.
     base_lines = text_b.splitlines()
-    event_lines = [(index, event) for index, event in enumerate(events_b)]
+
+    def line_seconds(line: str) -> int | None:
+        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
+        return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
+
     for addition in additions:
         target = len(base_lines)
-        for index, event in event_lines:
-            if event.seconds < addition.seconds:
+        for index, line in enumerate(base_lines):
+            seconds = line_seconds(line)
+            if seconds is not None and seconds < addition.seconds:
                 target = index
                 break
         base_lines.insert(target, addition.raw)
-        event_lines = [(index + (1 if index >= target else 0), event) for index, event in event_lines]
     merged_text = "\n".join(base_lines).rstrip()
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
