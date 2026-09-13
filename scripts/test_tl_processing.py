@@ -498,8 +498,20 @@ class TlProcessingTests(unittest.TestCase):
 
     def test_time_range_is_not_corrupted_or_treated_as_set(self) -> None:
         formatted = format_text("⭐️1:00-0:59　''※シオリSET\n")
-        self.assertIn("⭐️1:00-00:59", formatted)
+        self.assertIn("⭐️1:00-0:59", formatted)
         self.assertNotIn("[", formatted)
+
+    def test_time_formatting_normalizes_single_seconds(self) -> None:
+        self.assertEqual(format_text("1:6　タマキ\n"), "1:06　タマキ\n")
+        self.assertEqual(format_text("01:06　タマキ\n"), "1:06　タマキ\n")
+
+    def test_time_range_preserves_both_endpoints(self) -> None:
+        self.assertIn("1:00-0:59", format_text("1:00-0:59　シオリ\n"))
+        self.assertIn("1:00-00:59", format_text("1:00-00:59　シオリ\n"))
+
+    def test_carryover_shifts_time_range_as_a_range(self) -> None:
+        formatted = format_text("1:00-0:59　シオリ\n", carryover_seconds=60)
+        self.assertIn("0:30-29", formatted)
 
     def test_tl_display_declarations_override_formal_name_display(self) -> None:
         text = "すみれ\nTL表記は波レ\n1:17　すみれ\n"

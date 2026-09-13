@@ -137,7 +137,6 @@ def shift_tl_times(text: str, carryover_seconds: int = 90) -> str:
 
         start = render(start_total)
         end = render(end_total)
-        # 既存のTL表示に合わせ、同じ分の範囲は終了側を秒だけにする。
         if start_total >= 0 and end_total >= 0 and start_total // 60 == end_total // 60:
             return f"{start}-{end.split(':', 1)[1]}"
         return f"{start}-{end}"

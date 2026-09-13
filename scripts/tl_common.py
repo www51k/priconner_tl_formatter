@@ -43,7 +43,7 @@ BOSS_NAMES = _load_boss_names()
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
 DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES | LEARNED_NAME_ALIASES
-TIME_RE = re.compile(r"\d+:\d{2}(?:-\d{2})?")
+TIME_RE = re.compile(r"\d+:\d{1,2}(?:-\d{1,2})?")
 TIME_TOKEN_RE = re.compile(r"(?<!\d)(\d+):(\d{1,2})(?:-(\d{1,2}))?")
 BARE_TIME_RE = re.compile(r"\d{1,2}(?=\s|　|$)")
 BARE_TIME_TOKEN_RE = re.compile(r"^([^\d]*)(\d{1,2})(?=\s|　|$)")
@@ -66,6 +66,11 @@ def normalize_input_line(line: str) -> str:
         head, comment = source[:comment_start], source[comment_start:]
     else:
         head, comment = source, ""
+    full_range = re.match(r"^(.*?)(\d{1,2}):(\d{1,2})\s*[-〜~～－ー―‐—–]\s*(\d{1,2}):(\d{1,2})(.*)$", head)
+    if full_range:
+        prefix, start_min, start_sec, end_min, end_sec, suffix = full_range.groups()
+        head = f"{prefix}{int(start_min)}:{int(start_sec):02d}-{int(end_min)}:{int(end_sec):02d}{suffix}"
+        return head + comment
     # 敵UB見出しは、枠記号を外して通常のボス行へ変換する。
     boss_header = re.match(
         r"^\\?===【\s*(\d{1,2}:\d{1,2})\s*(?:敵UB|ボスUB|敵|ボス)\s*】===$",
@@ -368,6 +373,9 @@ def parse_event(
 ) -> Event:
     mask_match = MASK_RE.search(line)
     mask = mask_match.group(1) if mask_match else None
+    # ``1:00-0:59`` の終端 ``:59`` をキャラ名として誤抽出しない。
+    if re.search(r"\d{1,2}:\d{1,2}\s*[-〜~～－ー―‐—–]\s*\d{1,2}:\d{1,2}", line):
+        return Event(line_no, line, "", None, False, False, mask)
     # 持ち越し補正で0秒未満になった行は表示用の範囲外行であり、
     # ``-0:03``をキャラ名として誤認しない。
     if re.match(r"^\s*(?:⭐️|⭐︎|⭐|★|☆)?\s*-\d+:\d{1,2}", line):
