@@ -1161,6 +1161,35 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("→　タマキ　　[5-3-1]", formatted)
         self.assertNotIn("[54321]", formatted)
 
+    def test_preserve_set_keeps_star_set_on_the_same_line(self) -> None:
+        formatted = format_text("⭐️1:00　シオリ　[5--21]\n", preserve_set_operations=True)
+        self.assertIn("⭐️1:00　シオリ　　[5--21]", formatted)
+        self.assertNotIn("[54321]", formatted)
+
+    def test_preserve_set_keeps_range_time_and_attached_mask(self) -> None:
+        formatted = format_text(
+            "1:00-00　:59　シオリ　[543-1]\n",
+            preserve_set_operations=True,
+        )
+        self.assertIn("1:00-0:59", formatted)
+        self.assertIn("[543-1]", formatted)
+        self.assertNotIn("[54321]", formatted)
+
+    def test_preserve_set_keeps_mask_before_comment_while_formatting_comment(self) -> None:
+        formatted = format_text(
+            "1:06　ヴァイオレット　[5-321] //メモ\n",
+            preserve_set_operations=True,
+        )
+        self.assertIn("1:06　すみれ　　[5-321]　//メモ", formatted)
+
+    def test_preserve_set_still_normalizes_named_boss(self) -> None:
+        formatted = format_text(
+            "0:52　ミストシーカー　[-----]\n",
+            preserve_set_operations=True,
+        )
+        self.assertIn("0:52　ボス", formatted)
+        self.assertIn("[-----]", formatted)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -345,7 +345,9 @@ def format_text(
                     if tail_content and tail_content.startswith(("//", "''")):
                         if event.arrow:
                             rendered = rendered[:name_end].rstrip(" \t　") + "　" + tail_content
-                    elif tail_content:
+                    elif tail_content and not (
+                        preserve_set_operations and event.mask and tail_content.startswith("[")
+                    ):
                         auto_match = re.match(r"🅰️(?:ON|OFF)", tail_content)
                         if auto_match:
                             operation = auto_match.group(0)
