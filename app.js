@@ -228,8 +228,17 @@ function renderMergeSources() {
 
 function renderMergeLane() {
   mergeLane.replaceChildren();
-  const source = mergeB.value.split("\n");
   const battle = mergeA.value.split("\n");
+  const source = mergeB.value.split("\n");
+  const key = (line) => {
+    const time = line.match(/(\d{1,2}):(\d{2})/);
+    if (!time) return null;
+    const name = line.replace(/^.*?\d{1,2}:\d{2}/, "").trim().split(/[　 \[（(]/, 1)[0];
+    return `${Number(time[1]) * 60 + Number(time[2])}:${name}`;
+  };
+  const formattedByKey = new Map();
+  source.forEach((line, index) => { const value = key(line); if (value) formattedByKey.set(value, { line, index }); });
+  const matched = new Set();
   const title = document.createElement("div");
   title.className = "merge-lane-title";
   title.textContent = "整形済みTLの行を下のバトルTL行へドラッグ";
@@ -244,9 +253,11 @@ function renderMergeLane() {
     card.textContent = line || " ";
     card.addEventListener("dragstart", () => { mergeLane.dataset.dragIndex = String(index); card.classList.add("dragging"); });
     card.addEventListener("dragend", () => card.classList.remove("dragging"));
-    pool.append(card);
+    const value = key(line);
+    card.hidden = Boolean(value && battle.some((battleLine) => key(battleLine) === value));
+    if (!card.hidden) pool.append(card);
   });
-  mergeLane.append(pool);
+  if (pool.children.length) mergeLane.append(pool);
   const timeline = document.createElement("div");
   timeline.className = "merge-lane-timeline";
   battle.forEach((line, index) => {
@@ -254,6 +265,14 @@ function renderMergeLane() {
     row.className = "merge-lane-row";
     row.innerHTML = `<span class="merge-source-number">${index + 1}</span><span class="merge-lane-text"></span>`;
     row.querySelector(".merge-lane-text").textContent = line || " ";
+    const formatted = formattedByKey.get(key(line));
+    if (formatted) {
+      matched.add(formatted.index);
+      const detail = document.createElement("span");
+      detail.className = "merge-lane-match";
+      detail.textContent = `整形済み: ${formatted.line}`;
+      row.append(detail);
+    }
     row.addEventListener("dragover", (event) => event.preventDefault());
     row.addEventListener("drop", (event) => { event.preventDefault(); replaceBattleRow(Number(mergeLane.dataset.dragIndex), index); });
     timeline.append(row);
