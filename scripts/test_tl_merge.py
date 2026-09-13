@@ -16,6 +16,16 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_same_second_formal_alias_keeps_battle_order(self):
+        result = merge_texts(
+            "00:40 ヴァイオレット\n00:40 ティア\n00:40 シオリ\n00:40 タマキ\n",
+            "0:40　すみれ　　[5-3-1]\n　　　→　ティア　　[543-1]\n　　　→　シオリ　　[54321]\n　　　→　タマキ　　[-43--]\n",
+            ["すみれ", "ティア", "シオリ", "タマキ"],
+        )
+        assert [line.split("　", 1)[1].split("　", 1)[0] for line in result["text"].splitlines()] == [
+            "すみれ", "ティア", "シオリ", "タマキ"
+        ]
+
     def test_arrows_are_expanded_to_original_time_before_merge(self):
         self.assertEqual(expand_arrow_times("0:40　すみれ\n　　　→　タマキ"), "0:40　すみれ\n0:40　タマキ")
     def test_range_set_line_stays_inside_formatted_block(self):

@@ -114,6 +114,11 @@ def character_resolver(formation: Iterable[str] = ()):
         value = _clean_name(raw)
         if value in names:
             return value
+        for formal, short in CHARACTER_ALIASES.items():
+            if value == formal and short in names:
+                return short
+            if value == short and formal in names:
+                return formal
         matches = aliases.get(value, set())
         return next(iter(matches)) if len(matches) == 1 else None
 
