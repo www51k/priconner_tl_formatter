@@ -59,7 +59,9 @@
         </div>
       </section>
 
-      <section class="panel raw-import-panel">
+      <details class="late-stage-panel">
+        <summary>生TL取り込み</summary>
+      <section class="panel raw-import-panel late-stage-content">
         <div class="panel-heading">
           <div><span class="step">02</span><h2>生TL取り込み</h2></div>
           <span class="hint">ゲーム内・外部サイトから取得した生TLはこちら</span>
@@ -71,8 +73,11 @@
           <span id="raw-status" class="status" role="status"></span>
         </div>
       </section>
+      </details>
 
-      <section class="panel merge-panel">
+      <details class="late-stage-panel">
+        <summary>TLマージ確認</summary>
+      <section class="panel merge-panel late-stage-content">
         <div class="panel-heading">
           <div><span class="step">03</span><h2>TLマージ確認</h2></div>
           <span class="hint">TL A＝生TL、TL B＝手書きTL</span>
@@ -87,6 +92,7 @@
         </div>
         <pre id="merge-output" class="output-view merge-output" aria-label="TLマージ結果"></pre>
       </section>
+      </details>
 
       <section class="panel result-panel">
         <div class="panel-heading">
