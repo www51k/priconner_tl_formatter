@@ -236,6 +236,7 @@ function renderMergeLane() {
     const name = line.replace(/^.*?\d{1,2}:\d{2}/, "").trim().split(/[　 \[（(]/, 1)[0];
     return `${Number(time[1]) * 60 + Number(time[2])}:${name}`;
   };
+  const secondsOf = (line) => { const value = line.match(/(\d{1,2}):(\d{2})/); return value ? Number(value[1]) * 60 + Number(value[2]) : null; };
   const formattedByKey = new Map();
   source.forEach((line, index) => { const value = key(line); if (value) formattedByKey.set(value, { line, index }); });
   const matched = new Set();
@@ -243,8 +244,7 @@ function renderMergeLane() {
   title.className = "merge-lane-title";
   title.textContent = "整形済みTLの行を下のバトルTL行へドラッグ";
   mergeLane.append(title);
-  const unmatched = document.createElement("div");
-  unmatched.className = "merge-lane-pool merge-lane-unmatched";
+  const unmatched = [];
   source.forEach((line, index) => {
     const card = document.createElement("div");
     card.className = "merge-lane-card formatted-card";
@@ -255,10 +255,11 @@ function renderMergeLane() {
     card.addEventListener("dragend", () => card.classList.remove("dragging"));
     const value = key(line);
     card.hidden = Boolean(value && battle.some((battleLine) => key(battleLine) === value));
-    if (!card.hidden) unmatched.append(card);
+    if (!card.hidden) unmatched.push({ card, seconds: secondsOf(line) });
   });
   const timeline = document.createElement("div");
   timeline.className = "merge-lane-timeline";
+  const battleRows = [];
   battle.forEach((line, index) => {
     const row = document.createElement("div");
     row.className = "merge-lane-row";
@@ -275,6 +276,7 @@ function renderMergeLane() {
     row.addEventListener("dragover", (event) => event.preventDefault());
     row.addEventListener("drop", (event) => { event.preventDefault(); replaceBattleRow(Number(mergeLane.dataset.dragIndex), index); });
     timeline.append(row);
+    battleRows.push({ row, seconds: secondsOf(line) });
     const insert = document.createElement("div");
     insert.className = "merge-lane-insert";
     insert.textContent = "＋ ここへ挿入";
@@ -282,8 +284,12 @@ function renderMergeLane() {
     insert.addEventListener("drop", (event) => { event.preventDefault(); insertFormattedIntoBattle(Number(mergeLane.dataset.dragIndex), index + 1); });
     timeline.append(insert);
   });
+  unmatched.forEach(({ card, seconds }) => {
+    const target = battleRows.find(({ seconds: battleSeconds }) => battleSeconds !== null && seconds !== null && battleSeconds < seconds);
+    if (target) timeline.insertBefore(card, target.row);
+    else timeline.append(card);
+  });
   mergeLane.append(timeline);
-  if (unmatched.children.length) timeline.append(unmatched);
 }
 
 battlePreview.addEventListener("scroll", () => { formattedPreview.scrollTop = battlePreview.scrollTop; });
