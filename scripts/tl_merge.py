@@ -189,7 +189,27 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     for extra in sorted(formatted_only, key=lambda event: (-event.seconds, event.order)):
         target = next((index for index, event in enumerate(merged_events) if event.seconds < extra.seconds), len(merged_events))
         merged_events.insert(target, extra)
-    merged_text = "\n".join(event.raw for event in merged_events)
+    merged_lines = [event.raw for event in merged_events]
+    event_line_numbers = {event.order for event in events_b}
+    formatted_lines = text_b.splitlines()
+
+    def line_seconds(line: str) -> int | None:
+        match = re.search(r"(?<!\d)(\d{1,2}):(\d{1,2})(?:[-〜~－ー―‐—–-]\d{1,2})?", line)
+        return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
+
+    metadata = [(line_seconds(line), line) for index, line in enumerate(formatted_lines) if index not in event_line_numbers and line.strip()]
+    for seconds, line in metadata:
+        if seconds is None:
+            merged_lines.append(line)
+            continue
+        target = len(merged_lines)
+        for index, merged_line in enumerate(merged_lines):
+            merged_seconds = line_seconds(merged_line)
+            if merged_seconds is not None and merged_seconds < seconds:
+                target = index
+                break
+        merged_lines.insert(target, line)
+    merged_text = "\n".join(merged_lines)
     return {"text": merged_text, "unresolved": sorted(set(unresolved_a + unresolved_b))}
 
 
