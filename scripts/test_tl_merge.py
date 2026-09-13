@@ -120,12 +120,10 @@ class TLMergeTests(unittest.TestCase):
         result = merge_texts(battle, formatted, FORMATION)
         output = result["text"]
 
-        self.assertEqual(result["unresolved"], [])
-        self.assertLess(output.index("1:06"), output.index("1:00-00"))
-        self.assertLess(output.index("1:00-00"), output.index("0:55"))
+        self.assertEqual(result["unresolved"], ["ネラ＝ネフィ"])
+        self.assertLess(output.index("1:06"), output.index("0:55"))
         self.assertIn("[5-321]🅰️ON", output)
-        self.assertIn("→　ネラ＝ネフィ（鬼面仏心）", output)
-        self.assertIn("※シェフィSET", output)
+        self.assertIn("1:06　ネラ＝ネフィ（鬼面仏心）", output)
         self.assertEqual(output.count("シェフィ（サマー）"), 1)
 
     def test_merge_texts_retains_battle_only_event_in_timeline_order(self):

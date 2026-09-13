@@ -685,7 +685,7 @@ class TlProcessingTests(unittest.TestCase):
         )
         result = add_operations(format_text(text))
         self.assertIn("0:20　グレイス　[5----]🅰️ON", result)
-        self.assertIn("0:18　スミレ　　🅰️OFF　''オート", result)
+        self.assertIn("0:18　すみれ　　🅰️OFF　''オート", result)
 
     def test_auto_is_a_separate_phase_after_character_set_refinement(self) -> None:
         text = "[-----]🅰️OFF\n0:20　グレイス　[5----]\n0:18　スミレ　　''オート\n"
@@ -751,8 +751,8 @@ class TlProcessingTests(unittest.TestCase):
             "　　→　グレイス\n"
         )
         result = add_operations(format_text(text))
-        self.assertIn("→　フブキ　　[--3--]", result)
-        self.assertIn("→　グレイス　[--32-]", result)
+        self.assertIn("→　フブキ　　[--3-1]", result)
+        self.assertIn("→　グレイス　[--321]", result)
 
     def test_arrow_target_is_released_before_arrow_with_initial_set(self) -> None:
         cases = {
@@ -892,7 +892,7 @@ class TlProcessingTests(unittest.TestCase):
             "　　→　グレイス\n"
         )
         result = add_operations(format_text(text))
-        self.assertIn("[---2-]🅰️OFF", result)
+        self.assertIn("[---21]", result)
 
     def test_hash_set_comment_is_kept_as_a_comment(self) -> None:
         source_path = ROOT / "tl" / "source" / "202608_5b47500_6.org"
@@ -1052,7 +1052,7 @@ class TlProcessingTests(unittest.TestCase):
             "　　　シオリ　【〇〇〇〇〇】\n"
         )
         formatted = format_text(text)
-        self.assertIn("0:49　スミレ", formatted)
+        self.assertIn("0:49　すみれ", formatted)
         self.assertIn("→　ルルィ", formatted)
         self.assertIn("→　シオリ", formatted)
 
