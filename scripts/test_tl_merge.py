@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tl_merge import main, merge_events, parse_events
+from tl_merge import main, merge_events, merge_texts, parse_events
 
 
 FORMATION = [
@@ -54,6 +54,40 @@ class TLMergeTests(unittest.TestCase):
         events, unresolved = parse_events("01:15&#x20;ネラ&#x20;\n", "a", FORMATION)
         self.assertEqual(unresolved, [])
         self.assertEqual(events[0].name, "ネフィ＝ネラ（鬼面仏心）")
+
+    def test_merge_texts_uses_battle_order_and_keeps_formatted_annotations(self):
+        battle = "\n".join([
+            "01:06 シェフィ（サマー）",
+            "01:00 ペコリーヌ（ニューイヤー）",
+            "00:55 アオイ（パイロット）",
+        ])
+        formatted = "\n".join([
+            "[5-321]🅰️ON",
+            "",
+            "　1:06　シェフィ（サマー）　[5-321]",
+            "　　→　ネラ＝ネフィ（鬼面仏心）",
+            "⭐️1:00-00　:59　※シェフィSET",
+            "　0:55　アオイ（パイロット）　[543-1]",
+        ])
+
+        result = merge_texts(battle, formatted, FORMATION)
+        output = result["text"]
+
+        self.assertEqual(result["unresolved"], [])
+        self.assertLess(output.index("1:06"), output.index("1:00-00"))
+        self.assertLess(output.index("1:00-00"), output.index("0:55"))
+        self.assertIn("[5-321]🅰️ON", output)
+        self.assertIn("→　ネラ＝ネフィ（鬼面仏心）", output)
+        self.assertIn("※シェフィSET", output)
+        self.assertEqual(output.count("シェフィ（サマー）"), 1)
+
+    def test_merge_texts_retains_battle_only_event_in_timeline_order(self):
+        battle = "01:06 シェフィ（サマー）\n01:04 ペコリーヌ（ニューイヤー）"
+        formatted = "01:06　シェフィ（サマー）　[5-321]"
+
+        output = merge_texts(battle, formatted, FORMATION)["text"]
+        self.assertLess(output.index("1:06"), output.index("1:04"))
+        self.assertIn("1:04　ペコリーヌ（ニューイヤー）", output)
 
 
 if __name__ == "__main__":
