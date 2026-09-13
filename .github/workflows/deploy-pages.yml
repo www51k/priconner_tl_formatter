@@ -30,7 +30,9 @@ jobs:
       - name: Prepare site files
         run: |
           mkdir -p site-dist/scripts
+          mkdir -p site-dist/data
           cp index.html app.css app.js site-dist/
+          cp data/character_master.json data/character_aliases.json data/boss_names.json site-dist/data/
           cp scripts/character_aliases.py scripts/character_master.py scripts/tl_common.py scripts/format_tl.py \
             scripts/add_set_operations.py scripts/validate_tl.py scripts/review_tl.py scripts/tl_merge.py site-dist/scripts/
 
