@@ -48,7 +48,7 @@ CHARACTER_MASTER = _load_character_master()
 
 
 TIME_LINE_RE = re.compile(
-    r"^\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?(?P<time>\d{1,2}:\d{2})\s*(?P<body>.+?)\s*$"
+    r"^\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?(?P<time>\d{1,2}:\d{2})(?!\s*[-〜~～－ー―‐—–]\s*\d{1,2}(?::|\b))\s*(?P<body>.+?)\s*$"
 )
 ARROW_RE = re.compile(r"^(?:[⭐️⭐︎⭐★☆🔺△]\s*)?(?:→|➡︎|➡|⇨|⇒|->|>)\s*(?P<body>.+)$")
 
@@ -196,6 +196,8 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     formatted_lines = text_b.splitlines()
 
     def line_seconds(line: str) -> int | None:
+        if re.search(r"\d{1,2}:\d{1,2}\s*[-〜~～－ー―‐—–]\s*\d{1,2}:?\d{1,2}", line):
+            return None
         match = re.search(r"(\d{1,2}):(\d{1,2})", line)
         return _seconds(f"{match.group(1)}:{match.group(2)}") if match else None
 

@@ -16,6 +16,15 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_range_set_line_stays_inside_formatted_block(self):
+        result = merge_texts(
+            "01:00 シオリ\n",
+            "1:00-0:59　''※シオリSET\n[543-1]\n1:00　シオリ\n",
+            ["シオリ"],
+        )
+        self.assertIn("1:00-0:59", result["text"])
+        self.assertIn("[543-1]", result["text"])
+
     def test_game_short_name_resolves_to_formation_name(self):
         events, unresolved = parse_events("01:15 ネラ\n01:08 シェフィ（サマー）", "a", FORMATION)
         self.assertEqual(unresolved, [])
