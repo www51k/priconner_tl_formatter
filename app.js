@@ -806,7 +806,9 @@ merged = merge_texts(merge_text_a, merge_text_b, merge_formation)
 json.dumps(merged, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    const mergedText = removeArrowDuplicates(data.text, mergeB.value);
+    // マージ本体が同時刻の通常行と矢印行を区別しているため、
+    // ここで矢印先と同名の通常行を誤削除しない。
+    const mergedText = data.text;
     pyodide.globals.set("merged_text_for_format", mergedText);
     mergeOutput.value = normalizeMergedArrowSpacing(await pyodide.runPythonAsync("format_text(merged_text_for_format)"));
     mergeCopyButton.disabled = !mergeOutput.value;
