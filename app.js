@@ -22,6 +22,7 @@ const mergeButton = document.querySelector("#merge");
 const mergeStatus = document.querySelector("#merge-status");
 const mergeOutput = document.querySelector("#merge-output");
 const FORMATION_CACHE_KEY = "priconner_tl_formatter.formation.v1";
+const INPUT_CACHE_KEY = "priconner_tl_formatter.input.v1";
 
 let pyodidePromise;
 let draggedSlot = null;
@@ -53,6 +54,22 @@ function restoreFormationCache() {
     formationTouched = false;
   } catch (_) {
     // 保存データが壊れていても、空の編成欄から開始する。
+  }
+}
+
+function saveInputCache() {
+  try {
+    localStorage.setItem(INPUT_CACHE_KEY, input.value);
+  } catch (_) {
+    // 保存できない環境でも入力・整形処理は継続する。
+  }
+}
+
+function restoreInputCache() {
+  try {
+    input.value = localStorage.getItem(INPUT_CACHE_KEY) || "";
+  } catch (_) {
+    // 保存データを利用できない場合は空欄から開始する。
   }
 }
 
@@ -323,6 +340,7 @@ json.dumps({"text": set_text, "errors": errors, "error_details": error_details, 
 
 formatButton.addEventListener("click", formatTL);
 input.addEventListener("input", () => {
+  saveInputCache();
   autofillFormation(input.value);
   diagnoseTL(input.value);
 });
@@ -332,6 +350,7 @@ addSetOperations.addEventListener("change", () => {
 });
 clearButton.addEventListener("click", () => {
   input.value = "";
+  saveInputCache();
   output.textContent = "";
   copyButton.disabled = true;
   validation.hidden = true;
@@ -379,4 +398,7 @@ json.dumps(merged, ensure_ascii=False)
 });
 
 restoreFormationCache();
+restoreInputCache();
+autofillFormation(input.value);
+diagnoseTL(input.value);
 loadPython().then(() => setStatus("準備完了", "ready")).catch((error) => setStatus(`読み込みに失敗しました: ${error.message}`, "error"));
