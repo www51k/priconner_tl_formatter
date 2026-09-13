@@ -523,8 +523,9 @@ class TlProcessingTests(unittest.TestCase):
             self.assertNotIn("[54321]", formatted)
 
     def test_boss_names_are_normalized_from_the_synced_list(self) -> None:
-        from tl_common import BOSS_NAMES
-        self.assertTrue({"ミストシーカー", "メデューサ"}.issubset(BOSS_NAMES))
+        formatted = format_text("0:52　ミストシーカー\n0:51　メデューサ\n")
+        self.assertIn("0:52　ボス", formatted)
+        self.assertIn("0:51　ボス", formatted)
 
     def test_carryover_shifts_time_range_as_a_range(self) -> None:
         formatted = format_text("1:00-0:59　シオリ\n", carryover_seconds=60)
