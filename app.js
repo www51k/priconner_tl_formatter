@@ -632,6 +632,11 @@ async function loadPython() {
         return response.text();
       });
       pyodide.FS.writeFile("/home/pyodide/character_aliases.json", aliases);
+      const bosses = await fetch("data/boss_names.json?v=20260913-boss-names").then((response) => {
+        if (!response.ok) throw new Error("data/boss_names.json の読み込みに失敗しました");
+        return response.text();
+      });
+      pyodide.FS.writeFile("/home/pyodide/boss_names.json", bosses);
       await pyodide.runPythonAsync(`
 import sys
 sys.path.insert(0, "/home/pyodide/scripts")

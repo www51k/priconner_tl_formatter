@@ -3,14 +3,28 @@
 from __future__ import annotations
 
 import re
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
 
 CHARACTERS = ("アオイ", "ネラ", "ツムギ", "ペコ", "シェフィ")
 # 時刻付きで記録されることがあるボス名。キャラ候補から除外する。
 # 月替わりの名前は、将来的に同期マスタへ移す。
-BOSS_NAMES = {"マダムエレクトラ", "ミストシーカー", "バイオドーザー", "トライロッカー", "メデューサ"}
+def _load_boss_names() -> set[str]:
+    for path in (Path("/home/pyodide/boss_names.json"), Path(__file__).resolve().parent.parent / "data" / "boss_names.json"):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            names = payload.get("boss_names", [])
+            if names:
+                return set(names)
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+    return {"マダムエレクトラ", "ミストシーカー", "バイオドーザー", "トライロッカー", "メデューサ"}
+
+
+BOSS_NAMES = _load_boss_names()
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
 DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES | LEARNED_NAME_ALIASES
