@@ -66,17 +66,18 @@ def character_resolver(formation: Iterable[str] = ()):
             suffix = formal.split("＝", 1)[-1]
             candidates.add(suffix)
             candidates.add(re.split(r"[（(]", suffix, 1)[0])
+        candidates.add(re.split(r"[（(]", formal, 1)[0])
         for candidate in candidates:
             aliases.setdefault(candidate, set()).add(formal)
     # The formation remains authoritative, but the synced master supplies
     # nicknames such as ``すみれ`` -> ``ヴァイオレット``.
     for unit in CHARACTER_MASTER.values():
         formal = str(unit.get("formal_name", ""))
-        if formal not in names:
-            continue
         for candidate in unit.get("aliases", []):
             if candidate:
                 aliases.setdefault(str(candidate), set()).add(formal)
+        if formal:
+            aliases.setdefault(formal, set()).add(formal)
 
     def resolve(raw: str) -> str | None:
         value = _clean_name(raw)
