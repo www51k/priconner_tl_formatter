@@ -111,7 +111,7 @@ function renderSourceRows(container, value, draggable) {
   container.replaceChildren();
   if (!value) return;
   value.split("\n").forEach((line, index) => {
-    if (draggable) appendInsertZone(container, index);
+    appendInsertZone(container, index, draggable);
     const row = document.createElement("div");
     row.className = "merge-source-row";
     row.dataset.index = String(index);
@@ -134,20 +134,32 @@ function renderSourceRows(container, value, draggable) {
     }
     container.append(row);
   });
-  if (draggable) appendInsertZone(container, value.split("\n").length);
+  appendInsertZone(container, value.split("\n").length, draggable);
 }
 
-function appendInsertZone(container, index) {
+function appendInsertZone(container, index, draggable) {
   const zone = document.createElement("div");
-  zone.className = "merge-insert-zone";
+  zone.className = `merge-insert-zone${draggable ? "" : " merge-insert-zone-left"}`;
   zone.dataset.index = String(index);
-  zone.textContent = "＋ ここへ挿入";
+  zone.textContent = draggable ? "＋ ここへ挿入" : "＋ 行を追加";
   zone.addEventListener("dragover", (event) => event.preventDefault());
   zone.addEventListener("drop", (event) => {
     event.preventDefault();
-    moveFormattedRow(Number(formattedPreview.dataset.dragIndex), index);
+    if (draggable) moveFormattedRow(Number(formattedPreview.dataset.dragIndex), index);
   });
+  if (!draggable) zone.addEventListener("click", () => insertBattleRow(index));
   container.append(zone);
+}
+
+function insertBattleRow(index) {
+  const lines = mergeA.value.split("\n");
+  lines.splice(index, 0, "");
+  mergeA.value = lines.join("\n");
+  saveMergeCache();
+  renderMergeSources();
+  mergeA.focus();
+  const position = lines.slice(0, index + 1).join("\n").length;
+  mergeA.setSelectionRange(position, position);
 }
 
 function moveFormattedRow(from, target) {

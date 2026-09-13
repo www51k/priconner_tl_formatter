@@ -58,6 +58,8 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(114,224
 .merge-source-handle { color: var(--muted); user-select: none; }
 .merge-insert-zone { position: relative; z-index: 2; height: 0; margin: 0 4px; color: transparent; font: 11px/0 ui-sans-serif, sans-serif; text-align: center; border-radius: 5px; pointer-events: auto; }
 .merge-insert-zone:hover, .merge-insert-zone:has(+ .merge-source-row.dragging) { height: 0; color: var(--accent); outline: 1px dashed var(--accent); background: rgba(114,224,179,.18); }
+.merge-insert-zone-left { height: 8px; margin: -4px 4px; cursor: pointer; line-height: 8px; }
+.merge-insert-zone-left:hover { height: 8px; color: var(--accent); outline: 1px dashed var(--accent); background: rgba(114,224,179,.12); }
 .merge-output { min-height: 120px; margin-top: 14px; }
 .merge-direction { color: var(--accent); font-size: .9rem; font-weight: 800; letter-spacing: .04em; }
 .merge-field { display: block; color: var(--accent); font-weight: 800; line-height: 1.5; }
