@@ -81,10 +81,12 @@
             <div><span class="step">03</span><h2>TLマージ確認</h2></div>
             <span class="merge-direction">マージ元を左右に入力して、1本のTLに結合します</span>
           </div>
+          <div class="merge-stage-title">テキスト入力</div>
           <div class="merge-inputs">
-            <textarea id="merge-a" class="merge-source-storage" spellcheck="false" aria-hidden="true" tabindex="-1"></textarea>
-            <textarea id="merge-b" class="merge-source-storage" spellcheck="false" aria-hidden="true" tabindex="-1"></textarea>
+            <label class="merge-field">左：バトルTL<textarea id="merge-a" spellcheck="false" placeholder="バトルTL"></textarea></label>
+            <label class="merge-field">右：整形済みTL<textarea id="merge-b" spellcheck="false" placeholder="整形済みTL"></textarea></label>
           </div>
+          <div class="merge-stage-title">行をセル化してドラッグ</div>
           <div class="merge-source-board" aria-label="マージ元の行プレビュー">
             <div class="merge-source-pane">
               <div class="merge-source-title">左：バトルTL <span>順番固定</span></div>
@@ -100,7 +102,7 @@
             <span id="merge-status" class="status" role="status"></span>
           </div>
           <div class="merge-field merge-result-field">
-            <span>下：マージ後TL</span>
+            <div class="merge-stage-title">マージ後</div>
             <div id="merge-editor" class="merge-editor" aria-label="マージ後TL（行をドラッグして並べ替え）"></div>
             <textarea id="merge-output" class="merge-output-storage" aria-hidden="true" tabindex="-1" readonly></textarea>
             <div class="merge-editor-help">行をドラッグして順番を調整できます</div>
@@ -112,6 +114,6 @@
         <span>tl-formatter</span>
       </footer>
     </main>
-    <script type="module" src="app.js?v=20260913-merge-cells-1"></script>
+    <script type="module" src="app.js?v=20260913-merge-stages-1"></script>
   </body>
 </html>
