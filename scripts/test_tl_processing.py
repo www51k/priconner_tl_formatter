@@ -420,6 +420,11 @@ class TlProcessingTests(unittest.TestCase):
             "　1:12　ボス　　　コメント\n⭐️　　→　ボス　''コメント\n",
         )
 
+    def test_named_boss_is_not_rendered_as_a_long_character(self) -> None:
+        result = format_text("1:30　ミストシーカー\n1:20　アオイ\n")
+        self.assertIn("1:30　ミストシーカー", result)
+        self.assertIn("1:20　アオイ", result)
+
     def test_enemy_labels_inside_comments_are_preserved(self) -> None:
         formatted = format_text("1:12　アオイ　''敵 敵UB\n1:11　アオイ　// 敵 敵UB\n")
         self.assertIn("''敵 敵UB", formatted)

@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from character_aliases import CHARACTER_ALIASES, LEARNED_NAME_ALIASES
 
 CHARACTERS = ("アオイ", "ネラ", "ツムギ", "ペコ", "シェフィ")
+# 時刻付きで記録されることがあるボス名。キャラ候補から除外する。
+# 月替わりの名前は、将来的に同期マスタへ移す。
+BOSS_NAMES = {"マダムエレクトラ", "ミストシーカー", "バイオドーザー", "トライロッカー", "メデューサ"}
 CHAR_NUMBERS = {name: number for name, number in zip(CHARACTERS, "54321")}
 # 長い正式名を使う編成では、ここへ4文字の表示用略称を登録する。
 DISPLAY_NAMES = {name: name for name in CHARACTERS} | CHARACTER_ALIASES | LEARNED_NAME_ALIASES
@@ -427,7 +430,7 @@ def parse_event(
             prefix = line[: line.find(name)]
 
     # 開始行・ボス行はキャラクター発動ではない。
-    if name in {"開始時", "開始", "バトル開始", "止めぽ"}:
+    if name in {"開始時", "開始", "バトル開始", "止めぽ"} or name in BOSS_NAMES:
         name = None
 
     manual_hint = False
