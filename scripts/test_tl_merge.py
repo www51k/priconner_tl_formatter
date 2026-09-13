@@ -16,6 +16,12 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_formal_and_alias_resolve_to_one_canonical_character_name(self):
+        events, unresolved = parse_events(
+            "0:40 ヴァイオレット\n0:39 すみれ", "a", ["すみれ"]
+        )
+        assert unresolved == []
+        assert [event.name for event in events] == ["すみれ", "すみれ"]
     def test_same_second_formal_alias_keeps_battle_order(self):
         result = merge_texts(
             "00:40 ヴァイオレット\n00:40 ティア\n00:40 シオリ\n00:40 タマキ\n",

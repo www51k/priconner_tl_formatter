@@ -82,6 +82,10 @@ def character_resolver(formation: Iterable[str] = ()):
     Ambiguous short names remain unresolved instead of being guessed.
     """
     names = [n.strip() for n in formation if n and n.strip()]
+    canonical: dict[str, str] = {}
+    for formal, short in CHARACTER_ALIASES.items():
+        canonical[formal] = short
+        canonical[short] = short
     aliases: dict[str, set[str]] = {}
     for formal in names:
         candidates = {formal, _clean_name(formal)}
@@ -112,6 +116,8 @@ def character_resolver(formation: Iterable[str] = ()):
 
     def resolve(raw: str) -> str | None:
         value = _clean_name(raw)
+        if value in canonical:
+            return canonical[value]
         if value in names:
             return value
         for formal, short in CHARACTER_ALIASES.items():
