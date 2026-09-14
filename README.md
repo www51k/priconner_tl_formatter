@@ -72,6 +72,28 @@ python3 scripts/tl_merge.py raw.txt game.txt --formation "アオイ（パイロ�
 python3 -m unittest scripts/test_tl_processing.py
 ```
 
+## 他プロジェクト（Discord Botなど）から利用する
+
+変換処理は `priconner_tl` パッケージとして利用できます。開発中のBotからは、リポジトリをローカル依存として指定します。
+
+```toml
+[project]
+dependencies = [
+  "priconner-tl @ file:///D:/git/priconner_tl_formatter",
+]
+```
+
+Bot側では公開APIをimportして使用します。
+
+```python
+from priconner_tl import add_operations, format_text
+
+formatted = format_text(source_text)
+result = add_operations(formatted)
+```
+
+`format_text` は表記を整形し、`add_operations` は整形済みTLにSET操作を追加します。依存先をGitタグ（例: `@v0.1.0`）に変更すれば、各Botの更新タイミングを固定できます。辞書JSONもパッケージに同梱されるため、Botの実行ディレクトリには依存しません。
+
 ## GitHub Actions
 
 GitHubの`Actions`タブから`Format TL`を選び、`Run workflow`を実行すると、入力ファイルを指定して整形できます。

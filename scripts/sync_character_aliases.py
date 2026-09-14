@@ -10,12 +10,10 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
-DEFAULT_GID = "53006538"  # characters
+DEFAULT_SOURCE_URL = "https://raw.githubusercontent.com/priconner51bk-prog/priconner_master_data/main/dist/characters.csv"
 
 
-def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
-    url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+def fetch_csv(url: str, opener=urlopen) -> str:
     request = Request(url, headers={"User-Agent": "priconner-tl-formatter/1.0"})
     with opener(request, timeout=30) as response:
         return response.read().decode("utf-8-sig")
@@ -35,10 +33,14 @@ def build_aliases(csv_text: str) -> dict[str, dict[str, str]]:
                     values = json.loads(row[3])
                 except json.JSONDecodeError:
                     values = [row[3]]
+            # Runtime convention is formal name -> display alias. The unified
+            # sheet stores both in the aliases array, so choose the first
+            # non-formal alias as the display form.
             for value in values:
                 alias = str(value).strip()
                 if alias and alias != formal:
-                    aliases[alias] = formal
+                    aliases[formal] = alias
+                    break
         return {
             "character_aliases": dict(sorted(aliases.items())),
             "learned_name_aliases": {"スミレ": "すみれ"},
@@ -61,11 +63,10 @@ def build_aliases(csv_text: str) -> dict[str, dict[str, str]]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--spreadsheet-id", default=os.getenv("CHARACTER_ALIAS_SHEET_ID", DEFAULT_SPREADSHEET_ID))
-    parser.add_argument("--gid", default=os.getenv("CHARACTER_ALIAS_SHEET_GID", DEFAULT_GID))
+    parser.add_argument("--source-url", default=os.getenv("CHARACTER_SOURCE_URL", DEFAULT_SOURCE_URL))
     parser.add_argument("--json", default="data/character_aliases.json")
     args = parser.parse_args(argv)
-    payload = build_aliases(fetch_csv(args.spreadsheet_id, args.gid))
+    payload = build_aliases(fetch_csv(args.source_url))
     output = Path(args.json)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

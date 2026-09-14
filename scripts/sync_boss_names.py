@@ -10,12 +10,10 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
-DEFAULT_GID = "688432019"  # clan_battle_bosses
+DEFAULT_SOURCE_URL = "https://raw.githubusercontent.com/priconner51bk-prog/priconner_master_data/main/dist/clan_battle_bosses.csv"
 
 
-def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
-    url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+def fetch_csv(url: str, opener=urlopen) -> str:
     request = Request(url, headers={"User-Agent": "priconner-tl-formatter/1.0"})
     with opener(request, timeout=30) as response:
         return response.read().decode("utf-8-sig")
@@ -23,7 +21,12 @@ def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
 
 def build_boss_names(csv_text: str) -> list[str]:
     rows = list(csv.reader(io.StringIO(csv_text)))
-    if rows and rows[0][:5] == ["id", "name", "name_en", "aliases", "release"]:
+    if rows and rows[0] == ["ボス名"]:
+        names = [row[0].strip() for row in rows[1:] if row and row[0].strip()]
+        if not names:
+            raise ValueError("ボス名を1件も取得できませんでした")
+        return list(dict.fromkeys(names))
+    if rows and (rows[0][:5] == ["id", "name", "name_en", "aliases", "release"] or rows[0][:3] == ["id", "name", "aliases"]):
         names = [row[1].strip() for row in rows[1:] if len(row) >= 2 and row[1].strip()]
         if not names:
             raise ValueError("ボス名を1件も取得できませんでした")
@@ -38,11 +41,10 @@ def build_boss_names(csv_text: str) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--spreadsheet-id", default=os.getenv("BOSS_SHEET_ID", DEFAULT_SPREADSHEET_ID))
-    parser.add_argument("--gid", default=os.getenv("BOSS_SHEET_GID", DEFAULT_GID))
+    parser.add_argument("--source-url", default=os.getenv("BOSS_SOURCE_URL", DEFAULT_SOURCE_URL))
     parser.add_argument("--json", default="data/boss_names.json")
     args = parser.parse_args(argv)
-    names = build_boss_names(fetch_csv(args.spreadsheet_id, args.gid))
+    names = build_boss_names(fetch_csv(args.source_url))
     output = Path(args.json)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps({"boss_names": names}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

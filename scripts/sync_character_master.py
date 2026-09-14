@@ -13,12 +13,10 @@ import os
 from pathlib import Path
 from urllib.request import Request, urlopen
 
-DEFAULT_SPREADSHEET_ID = "1JQfLmv_OZnnDeLyr2WByM0rLLSFP-mwUsmXM_oBIwRQ"
-DEFAULT_GID = "53006538"  # characters
+DEFAULT_SOURCE_URL = "https://raw.githubusercontent.com/priconner51bk-prog/priconner_master_data/main/dist/characters.csv"
 
 
-def fetch_csv(spreadsheet_id: str, gid: str, opener=urlopen) -> str:
-    url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv&gid={gid}"
+def fetch_csv(url: str, opener=urlopen) -> str:
     request = Request(url, headers={"User-Agent": "priconner-tl-formatter/1.0"})
     with opener(request, timeout=30) as response:
         payload = response.read()
@@ -89,12 +87,11 @@ def write_outputs(master: dict[str, dict[str, object]], json_path: Path, python_
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--spreadsheet-id", default=os.getenv("CHARACTER_SHEET_ID", DEFAULT_SPREADSHEET_ID))
-    parser.add_argument("--gid", default=os.getenv("CHARACTER_SHEET_GID", DEFAULT_GID))
+    parser.add_argument("--source-url", default=os.getenv("CHARACTER_SOURCE_URL", DEFAULT_SOURCE_URL))
     parser.add_argument("--json", default="data/character_master.json")
     parser.add_argument("--python", dest="python_path", default="scripts/character_master.py")
     args = parser.parse_args(argv)
-    text = fetch_csv(args.spreadsheet_id, args.gid)
+    text = fetch_csv(args.source_url)
     master = build_master(text)
     write_outputs(master, Path(args.json), Path(args.python_path))
     print(f"同期完了: {len(master)}キャラ")
