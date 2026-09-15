@@ -135,8 +135,7 @@ def normalize_input_line(line: str) -> str:
     # 実データでは全角括弧がキャラ名の注記にも使われるため、
     # 構造マスクの括弧だけを先に正規化し、注記本文は保持する。
     head = head.replace("〇️", "O").replace("〇", "O")
-    formation = FORMATION_RE.search(head)
-    if formation:
+    def convert_formation(formation: re.Match[str]) -> str:
         pattern = formation.group(0).strip("[]")
         converted = "".join(
             char if char in FORMATION_ON_CHARS else "-"
@@ -146,7 +145,9 @@ def normalize_input_line(line: str) -> str:
             str(5 - index) if char != "-" else "-"
             for index, char in enumerate(converted)
         )
-        head = head[: formation.start()] + f"[{converted}]" + head[formation.end() :]
+        return f"[{converted}]"
+
+    head = FORMATION_RE.sub(convert_formation, head)
     # キャラ間矢印より後ろは後続キャラ・備考の領域。オート表記を
     # 前のキャラへ誤付与しないよう、矢印前だけ正規化する。
     arrow_boundary = re.search(r"(?:→|⇒|->|➡︎|➡|⇨|↦)", head)
