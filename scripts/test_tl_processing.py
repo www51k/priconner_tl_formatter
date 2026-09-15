@@ -578,6 +578,17 @@ class TlProcessingTests(unittest.TestCase):
             with self.subTest(pattern=pattern):
                 self.assertEqual(format_text(pattern + "\n"), "[5-3-1]\n")
 
+    def test_two_set_masks_on_one_line_are_both_normalized(self) -> None:
+        text = (
+            "1:18　タマキ　UNSET　タマキ　"
+            "(TP10+　make　sure　チエル　[543-1]　unset　too)　/　○○××○\n"
+        )
+        formatted = format_text(text)
+        self.assertIn("[543-1]", formatted)
+        self.assertIn("[54--1]", formatted)
+        self.assertEqual(formatted.count("[543-1]"), 1)
+        self.assertEqual(formatted.count("[54--1]"), 1)
+
     def test_parenthesized_formation_symbols_do_not_leave_parentheses(self) -> None:
         formatted = format_text("0:14　ティア　(〇〇〇〇〇)\n")
         self.assertEqual(formatted, "0:14　ティア　　[54321]\n")
