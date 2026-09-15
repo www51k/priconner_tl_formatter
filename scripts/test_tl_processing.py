@@ -581,7 +581,7 @@ class TlProcessingTests(unittest.TestCase):
     def test_two_set_masks_on_one_line_are_both_normalized(self) -> None:
         text = (
             "1:18　タマキ　UNSET　タマキ　"
-            "(TP10+　make　sure　チエル　[543-1]　unset　too)　/　○○××○\n"
+            "(TP10+　make　sure　チエル　○○○×○　unset　too)　/　○○××○\n"
         )
         formatted = format_text(text)
         self.assertIn("[543-1]", formatted)
