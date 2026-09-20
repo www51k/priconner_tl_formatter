@@ -30,6 +30,18 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("すみれ", format_text("1:06　ヴァイオレット\n"))
         self.assertNotIn("ヴァイオレット", format_text("1:06　ヴァイオレット\n"))
 
+    def test_formation_mask_ignores_invisible_direction_controls(self) -> None:
+        source = (
+            "1:30 〇\u202a\u202a✕\u202c〇〇✕\u202c\n"
+            "1:17 ネフィ 〇〇〇〇\u202a\u202a✕\n"
+        )
+
+        result = format_text(source)
+
+        self.assertEqual(result, "1:30　[5-32-]\n1:17　ネフィ　　[5432-]\n")
+        self.assertNotRegex(result, r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]")
+        self.assertNotRegex(result, r"(?<!\[)[0-9-]{5}(?!\])")
+
     def test_carryover_default_keeps_original_times(self) -> None:
         source = "1:20　アオイ　// 1:20のメモ\n"
         self.assertEqual(shift_tl_times(source), source)

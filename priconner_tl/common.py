@@ -54,11 +54,19 @@ FORMATION_RE = re.compile(
     rf"\[?[{re.escape(FORMATION_ON_CHARS + FORMATION_OFF_CHARS)}]{{5}}\]?"
 )
 FORMATION_ENTRY_RE = re.compile(r"\(([54321])\)([^|)\]]+)")
+# Discord/ブラウザ由来の不可視制御文字。文字幅や絵文字の表示に必要な
+# variation selector (U+FE0E/U+FE0F) はここには含めない。
+INVISIBLE_INPUT_CONTROL_RE = re.compile(
+    r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]"
+)
 
 
 def normalize_input_line(line: str) -> str:
     """コメントを保護したまま、入力行の構造部分だけを正規化する。"""
-    source = str(line).rstrip("\r")
+    # formation mask の文字間に混入した bidi/ゼロ幅制御文字は、5文字
+    # 判定を分断してしまうため、構造判定より前に除去する。通常文字・
+    # 記号・改行や variation selector は変更しない。
+    source = INVISIBLE_INPUT_CONTROL_RE.sub("", str(line)).rstrip("\r")
     # // と '' は備考の開始位置。最初に現れた方以降を完全保持する。
     comment_positions = [pos for pos in (source.find("//"), source.find("''")) if pos >= 0]
     if comment_positions:
