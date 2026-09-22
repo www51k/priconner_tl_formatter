@@ -1,5 +1,6 @@
 const PYODIDE_VERSION = "0.27.2";
 const SCRIPT_NAMES = ["character_aliases.py", "character_master.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
+const PACKAGE_NAMES = ["__init__.py", "character_aliases.py", "character_master.py", "common.py", "formatter.py", "merge.py", "set_operations.py"];
 
 const input = document.querySelector("#input");
 const output = document.querySelector("#output");
@@ -645,12 +646,20 @@ async function loadPython() {
       const { loadPyodide } = await import(`https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/pyodide.mjs`);
       const pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/` });
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
+      pyodide.FS.mkdirTree("/home/pyodide/priconner_tl");
       for (const name of SCRIPT_NAMES) {
         const source = await fetch(`scripts/${name}?v=20260914-merge-12`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
         pyodide.FS.writeFile(`/home/pyodide/scripts/${name}`, source);
+      }
+      for (const name of PACKAGE_NAMES) {
+        const source = await fetch(`priconner_tl/${name}?v=20260922-pyodide-package`).then((response) => {
+          if (!response.ok) throw new Error(`priconner_tl/${name} の読み込みに失敗しました`);
+          return response.text();
+        });
+        pyodide.FS.writeFile(`/home/pyodide/priconner_tl/${name}`, source);
       }
       const master = await fetch("data/character_master.json?v=20260913-json-master").then((response) => {
         if (!response.ok) throw new Error("data/character_master.json の読み込みに失敗しました");
@@ -674,6 +683,7 @@ async function loadPython() {
       pyodide.FS.writeFile("/home/pyodide/boss_names.json", bosses);
       await pyodide.runPythonAsync(`
 import sys
+sys.path.insert(0, "/home/pyodide")
 sys.path.insert(0, "/home/pyodide/scripts")
 from format_tl import format_text
 from add_set_operations import add_operations
