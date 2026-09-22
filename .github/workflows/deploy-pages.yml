@@ -31,8 +31,12 @@ jobs:
         run: |
           mkdir -p site-dist/scripts
           mkdir -p site-dist/data
+          mkdir -p site-dist/priconner_tl
           cp index.html app.css app.js site-dist/
           cp data/character_master.json data/character_aliases.json data/boss_names.json site-dist/data/
+          cp priconner_tl/__init__.py priconner_tl/character_aliases.py priconner_tl/character_master.py \
+            priconner_tl/common.py priconner_tl/formatter.py priconner_tl/merge.py \
+            priconner_tl/set_operations.py site-dist/priconner_tl/
           cp scripts/character_aliases.py scripts/character_master.py scripts/tl_common.py scripts/format_tl.py \
             scripts/add_set_operations.py scripts/validate_tl.py scripts/review_tl.py scripts/tl_merge.py site-dist/scripts/
 
