@@ -572,23 +572,23 @@ function diagnoseTL(source) {
   if (!source.trim()) {
     diagnosis.textContent = "TLを貼り付けると、自動判定します";
     formationPanel.hidden = true;
-    return;
   }
-  if (!addSetOperations.checked) {
-    diagnosis.innerHTML = "判定：<strong>書式整形のみ</strong>（SET操作追加OFF）";
-    formationPanel.hidden = true;
-    return;
-  }
+  if (!source.trim()) return;
+
   const lines = source.split("\n");
   const headerIndex = lines.findIndex((line) => /^\s*\[\(5\)/.test(line));
   const hasSetOperation = lines.some((line, index) =>
     index !== headerIndex && isSetNotationLine(line)
   );
   if (hasSetOperation) {
-    diagnosis.innerHTML = "判定：<strong>セミオ扱い</strong>（SET操作あり。SET操作は不要として扱います）";
+    diagnosis.innerHTML = addSetOperations.checked
+      ? "判定：<strong>セミオ扱い</strong>（SET操作あり。SET操作は不要として扱います）"
+      : "判定：<strong>書式整形のみ</strong>（SET操作追加OFF）";
     formationPanel.hidden = true;
   } else {
-    diagnosis.innerHTML = "判定：<strong>手動TL</strong>（SET表記なし）";
+    diagnosis.innerHTML = addSetOperations.checked
+      ? "判定：<strong>手動TL</strong>（SET表記なし）"
+      : "判定：<strong>書式整形のみ</strong>（SET操作追加OFF・編成確認可）";
     formationPanel.hidden = false;
   }
 }
