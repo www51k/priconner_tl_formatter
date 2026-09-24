@@ -26,13 +26,20 @@ def build_boss_names(csv_text: str) -> list[str]:
         if not names:
             raise ValueError("ボス名を1件も取得できませんでした")
         return list(dict.fromkeys(names))
-    if rows and (rows[0][:5] == ["id", "name", "name_en", "aliases", "release"] or rows[0][:3] == ["id", "name", "aliases"]):
-        names = [row[1].strip() for row in rows[1:] if len(row) >= 2 and row[1].strip()]
-        if not names:
-            raise ValueError("ボス名を1件も取得できませんでした")
-        return list(dict.fromkeys(names))
-    if len(rows) < 2 or not rows[0] or rows[0][0] != "boss1":
-        raise ValueError("★boss_nameタブのヘッダーが想定と異なります")
+
+    # 上流CSVは列の追加・並べ替えがあるため、名前列の位置はヘッダーから判定する。
+    if rows:
+        header = [column.strip().lower() for column in rows[0]]
+        if "name" in header:
+            name_index = header.index("name")
+            names = [row[name_index].strip() for row in rows[1:] if len(row) > name_index and row[name_index].strip()]
+            if not names:
+                raise ValueError("ボス名を1件も取得できませんでした")
+            return list(dict.fromkeys(names))
+
+    if len(rows) < 2 or not rows[0] or rows[0][0].strip() != "boss1":
+        header = ",".join(rows[0]) if rows else "(空)"
+        raise ValueError(f"ボス名CSVのヘッダーが想定外です: {header}")
     names = [cell.strip() for cell in rows[1] if cell.strip()]
     if not names:
         raise ValueError("ボス名を1件も取得できませんでした")
