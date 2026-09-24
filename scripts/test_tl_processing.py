@@ -91,14 +91,14 @@ class TlProcessingTests(unittest.TestCase):
         source = "☆1:19-18　タコ　ライジングTP早め\n"
         self.assertEqual(
             format_text(source),
-            "⭐️1:19-18　タコ　''ライジングTP早め\n",
+            "⭐️1:19-18　タコ　'ライジングTP早め\n",
         )
 
-    def test_single_apostrophe_manual_note_gets_star_and_double_apostrophe(self) -> None:
+    def test_single_apostrophe_manual_note_gets_star_and_single_apostrophe(self) -> None:
         source = "0:27 ペコ　'サンライズ後、アオイUB後すぐ、26でも間に合う\n"
         self.assertEqual(
             format_text(source),
-            "⭐️0:27　ペコ　''サンライズ後、アオイUB後すぐ、26でも間に合う\n",
+            "⭐️0:27　ペコ　'サンライズ後、アオイUB後すぐ、26でも間に合う\n",
         )
 
     def test_inline_star_set_is_not_duplicated_by_following_same_set_line(self) -> None:
@@ -345,10 +345,16 @@ class TlProcessingTests(unittest.TestCase):
         )
 
     def test_all_set_words_inside_comments_are_preserved(self) -> None:
-        text = "1:03　クリア　''全set 全解除\n1:02　クリア　// 全set 全解除\n"
+        text = (
+            "1:03　クリア　''全set 全解除\n"
+            "1:02　クリア　// 全set 全解除\n"
+            "⭐️1:01　クリア　'全set 全解除\n"
+        )
         self.assertEqual(
             format_text(text),
-            "1:03　クリア　　''全set 全解除\n1:02　クリア　　// 全set 全解除\n",
+            "　1:03　クリア　　''全set 全解除\n"
+            "　1:02　クリア　　// 全set 全解除\n"
+            "⭐️1:01　クリア　'全set 全解除\n",
         )
 
     def test_start_line_places_set_and_auto_at_the_top(self) -> None:
@@ -433,7 +439,7 @@ class TlProcessingTests(unittest.TestCase):
         )
         self.assertEqual(
             formatted,
-            "　1:12　ボス　　　コメント\n⭐️　　→　ボス　''コメント\n",
+            "　1:12　ボス　　　コメント\n⭐️　　→　ボス　'コメント\n",
         )
 
     def test_named_boss_is_not_rendered_as_a_long_character(self) -> None:
@@ -559,8 +565,8 @@ class TlProcessingTests(unittest.TestCase):
         )
         self.assertEqual(character_names_from_formation(text)["波レ"], "1")
 
-    def test_manual_line_comments_get_double_quote_marker(self) -> None:
-        self.assertIn("⭐️0:10　アオイ　''通常Hit最速", format_text("⭐️0:10　アオイ　通常Hit最速\n"))
+    def test_manual_line_comments_get_single_quote_marker(self) -> None:
+        self.assertIn("⭐️0:10　アオイ　'通常Hit最速", format_text("⭐️0:10　アオイ　通常Hit最速\n"))
         self.assertIn("⭐️0:10　アオイ　　//既存コメント", format_text("⭐️0:10　アオイ　//既存コメント\n"))
 
     def test_symbolic_tl_indents_unmarked_timed_lines(self) -> None:
@@ -572,7 +578,7 @@ class TlProcessingTests(unittest.TestCase):
         formatted = format_text(
             "🔺1:06　シオリ\n⇒チエル\n⭐️1:06　タマキ　アイスバフ最速\n"
         )
-        self.assertIn("⭐️　　→　タマキ　''アイスバフ最速", formatted)
+        self.assertIn("⭐️　　→　タマキ　'アイスバフ最速", formatted)
         self.assertNotIn("⭐️1:06　タマキ", formatted)
 
     def test_backslash_only_separator_lines_are_removed(self) -> None:

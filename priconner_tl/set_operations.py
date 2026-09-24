@@ -74,14 +74,14 @@ def ensure_initial_operation(text: str, initial: str = "-----") -> str:
 
 def auto_note_in_line(line: str) -> bool:
     """オート操作として扱う明示的なオート記法だけを検出する。"""
-    comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
+    comment_positions = [pos for pos in (line.find("//"), line.find("'")) if pos >= 0]
     comment_start = min(comment_positions) if comment_positions else len(line)
     head = line[:comment_start]
     if re.search(r'''["「『]オート["」』]''', head):
         return True
     if re.search(r"(?:^|[ \t　])(?:#?オート|[（(]オート[）)])(?:$|[ \t　])", head):
         return True
-    return bool(re.match(r"''[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
+    return bool(re.match(r"'{1,2}[ \t　]*オート(?:[ \t　]|$)", line[comment_start:]))
 
 
 def ensure_initial_set_spacing(lines: list[str]) -> list[str]:
@@ -199,7 +199,7 @@ def ensure_first_event_set_safety(text: str) -> str:
 
 def add_auto_state(line: str, state: str, character_name: str | None = None) -> str:
     """コメント本文を変えず、コメント直前へオート状態を追加する。"""
-    comment_positions = [pos for pos in (line.find("//"), line.find("''")) if pos >= 0]
+    comment_positions = [pos for pos in (line.find("//"), line.find("'")) if pos >= 0]
     comment_start = min(comment_positions) if comment_positions else len(line)
     head = line[:comment_start]
     comment = line[comment_start:]
@@ -217,7 +217,7 @@ def add_auto_state(line: str, state: str, character_name: str | None = None) -> 
         # キャラ名は4文字幅にそろえ、その後ろに区切りを1つ置く。
         before_state = "　" * (max(0, 4 - len(display_name)) + 1)
     else:
-        before_state = "　　" if comment.startswith("''") else "　" if comment else ""
+        before_state = "　　" if comment.startswith("'") else "　" if comment else ""
     after_state = "　" if comment else ""
     if auto_note:
         head = head[: auto_note.start()].rstrip(" \t　") + f"🅰️{state}　" + head[auto_note.start():]

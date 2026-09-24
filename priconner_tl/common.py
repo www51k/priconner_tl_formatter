@@ -67,8 +67,15 @@ def normalize_input_line(line: str) -> str:
     # 判定を分断してしまうため、構造判定より前に除去する。通常文字・
     # 記号・改行や variation selector は変更しない。
     source = INVISIBLE_INPUT_CONTROL_RE.sub("", str(line)).rstrip("\r")
-    # // と '' は備考の開始位置。最初に現れた方以降を完全保持する。
+    # // とアポストロフィは備考の開始位置。最初に現れた方以降を完全保持する。
     comment_positions = [pos for pos in (source.find("//"), source.find("''")) if pos >= 0]
+    apostrophe_pos = source.find("'")
+    if apostrophe_pos >= 0 and not re.match(
+        r"'[ \t　]*(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)(?:$|[ \t　])",
+        source[apostrophe_pos:],
+        re.IGNORECASE,
+    ):
+        comment_positions.append(apostrophe_pos)
     if comment_positions:
         comment_start = min(comment_positions)
         head, comment = source[:comment_start], source[comment_start:]
@@ -495,7 +502,7 @@ def parse_event(
         name_end = line.find(name) + len(name)
         suffix = line[name_end:]
         suffix_stripped = suffix.strip(" \t　")
-        structural_suffix = re.split(r"//|''", suffix, maxsplit=1)[0]
+        structural_suffix = re.split(r"//|'", suffix, maxsplit=1)[0]
         structural_suffix = structural_suffix.strip(" \t　")
         is_quoted_auto_note = bool(
             re.fullmatch(r"[\"‘’“”「」『』']*オート[\"‘’“”「」『』']*", suffix_stripped)
@@ -504,12 +511,16 @@ def parse_event(
             re.fullmatch(r"(?:#?オート|[（(]オート[）)])", structural_suffix)
         )
         is_auto_marker = bool(re.fullmatch(r"🅰️(?:ON|OFF)", structural_suffix))
+        is_quoted_auto_operation = bool(
+            re.fullmatch(r"'[ \t　]*(?:オート|AUTO)[ \t　]*(?:ON|OFF|オン|オフ)", suffix_stripped, re.IGNORECASE)
+        )
         comment_only = suffix_stripped.startswith(("#", "//"))
         if (
             not comment_only
             and not is_quoted_auto_note
             and not is_auto_note
             and not is_auto_marker
+            and not is_quoted_auto_operation
             and (suffix_stripped.startswith("'") or structural_suffix)
         ):
             manual_hint = True

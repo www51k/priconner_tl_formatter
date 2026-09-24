@@ -50,7 +50,7 @@ def remove_redundant_auto_operations(lines: list[str]) -> list[str]:
     for line in lines:
         head, separator, comment = line.partition("//")
         if not separator:
-            head, separator, comment = line.partition("''")
+            head, separator, comment = line.partition("'")
         match = re.search(r"🅰️(ON|OFF)", head)
         if match:
             state = match.group(1)
@@ -146,7 +146,7 @@ def shift_tl_times(text: str, carryover_seconds: int = 90) -> str:
     for line in text.splitlines(keepends=True):
         line_body = line.rstrip("\r\n")
         newline = line[len(line_body):]
-        comment_positions = [pos for pos in (line_body.find("//"), line_body.find("''")) if pos >= 0]
+        comment_positions = [pos for pos in (line_body.find("//"), line_body.find("'")) if pos >= 0]
         comment_start = min(comment_positions) if comment_positions else len(line_body)
         head, comment = line_body[:comment_start], line_body[comment_start:]
         line_below_zero = False
@@ -329,9 +329,9 @@ def format_text(
                 display_names=display_names,
             )
             if event.star:
-                # 手動UBの ``''`` コメントは再変換時に区切り空白が
+                # 手動UBの ``'`` コメントは再変換時に区切り空白が
                 # 増えないよう、コメント直前だけ1個へ揃える。
-                rendered = re.sub(r"　{2,}(?='')", "　", rendered)
+                rendered = re.sub(r"　{2,}(?=')", "　", rendered)
                 # ⭐️行のキャラ名以降にある説明は手動操作タイミングの
                 # コメントとして扱う。既存コメントとオート操作は除外する。
                 display_name = display_names.get(event.name, event.name)
@@ -357,11 +357,11 @@ def format_text(
                                     rendered[:name_end]
                                     + "　"
                                     + operation
-                                    + "　''"
+                                    + "　'"
                                     + comment
                                 )
                         else:
-                            rendered = rendered[:name_end] + "　''" + tail_content
+                            rendered = rendered[:name_end] + "　'" + tail_content
             if (
                 has_time
                 and not event.star

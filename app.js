@@ -558,8 +558,8 @@ function autofillFormation(source) {
 }
 
 function isSetNotationLine(line) {
-  // # / // / '' はコメント・注記なので、SET判定へ含めない。
-  const structural = line.split(/#|\/\/|''/, 1)[0];
+  // # / // / ' はコメント・注記なので、SET判定へ含めない。
+  const structural = line.split(/#|\/\/|'/, 1)[0];
   const normalized = structural
     .replaceAll("⭕️", "O")
     .replaceAll("❌", "X")
@@ -648,14 +648,14 @@ async function loadPython() {
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       pyodide.FS.mkdirTree("/home/pyodide/priconner_tl");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260914-merge-12`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=20260924-single-apostrophe-comment`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
         pyodide.FS.writeFile(`/home/pyodide/scripts/${name}`, source);
       }
       for (const name of PACKAGE_NAMES) {
-        const source = await fetch(`priconner_tl/${name}?v=20260922-pyodide-package`).then((response) => {
+        const source = await fetch(`priconner_tl/${name}?v=20260924-single-apostrophe-comment`).then((response) => {
           if (!response.ok) throw new Error(`priconner_tl/${name} の読み込みに失敗しました`);
           return response.text();
         });
