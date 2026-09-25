@@ -1,4 +1,5 @@
 const PYODIDE_VERSION = "0.27.2";
+const ASSET_VERSION = "__DEPLOY_SHA__";
 const SCRIPT_NAMES = ["character_aliases.py", "character_master.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
 const PACKAGE_NAMES = ["__init__.py", "character_aliases.py", "character_master.py", "common.py", "formatter.py", "merge.py", "set_operations.py"];
 
@@ -648,25 +649,25 @@ async function loadPython() {
       pyodide.FS.mkdirTree("/home/pyodide/scripts");
       pyodide.FS.mkdirTree("/home/pyodide/priconner_tl");
       for (const name of SCRIPT_NAMES) {
-        const source = await fetch(`scripts/${name}?v=20260924-single-apostrophe-comment`).then((response) => {
+        const source = await fetch(`scripts/${name}?v=${ASSET_VERSION}`).then((response) => {
           if (!response.ok) throw new Error(`${name} の読み込みに失敗しました`);
           return response.text();
         });
         pyodide.FS.writeFile(`/home/pyodide/scripts/${name}`, source);
       }
       for (const name of PACKAGE_NAMES) {
-        const source = await fetch(`priconner_tl/${name}?v=20260924-single-apostrophe-comment`).then((response) => {
+        const source = await fetch(`priconner_tl/${name}?v=${ASSET_VERSION}`).then((response) => {
           if (!response.ok) throw new Error(`priconner_tl/${name} の読み込みに失敗しました`);
           return response.text();
         });
         pyodide.FS.writeFile(`/home/pyodide/priconner_tl/${name}`, source);
       }
-      const master = await fetch("data/character_master.json?v=20260913-json-master").then((response) => {
+      const master = await fetch(`data/character_master.json?v=${ASSET_VERSION}`).then((response) => {
         if (!response.ok) throw new Error("data/character_master.json の読み込みに失敗しました");
         return response.text();
       });
       pyodide.FS.writeFile("/home/pyodide/character_master.json", master);
-      const aliases = await fetch("data/character_aliases.json?v=20260913-sheet-aliases-v2").then((response) => {
+      const aliases = await fetch(`data/character_aliases.json?v=${ASSET_VERSION}`).then((response) => {
         if (!response.ok) throw new Error("data/character_aliases.json の読み込みに失敗しました");
         return response.text();
       });
@@ -676,7 +677,7 @@ async function loadPython() {
         ...(aliasPayload.learned_name_aliases || {}),
       };
       pyodide.FS.writeFile("/home/pyodide/character_aliases.json", aliases);
-      const bosses = await fetch("data/boss_names.json?v=20260913-boss-names").then((response) => {
+      const bosses = await fetch(`data/boss_names.json?v=${ASSET_VERSION}`).then((response) => {
         if (!response.ok) throw new Error("data/boss_names.json の読み込みに失敗しました");
         return response.text();
       });
@@ -695,7 +696,16 @@ from tl_merge import parse_events, merge_events, merge_texts
       return pyodide;
     })();
   }
-  return pyodidePromise;
+  const loading = pyodidePromise;
+  try {
+    return await loading;
+  } catch (error) {
+    if (pyodidePromise === loading) {
+      pyodidePromise = null;
+      characterAliasMap = {};
+    }
+    throw error;
+  }
 }
 
 async function formatTL() {

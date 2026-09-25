@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Sync character master"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -16,6 +19,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -23,6 +27,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run tests and check JavaScript
+        run: |
+          python -m pip install pytest
+          PYTHONPATH=scripts python -m pytest -q
+          node --check app.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -39,6 +54,12 @@ jobs:
             priconner_tl/set_operations.py site-dist/priconner_tl/
           cp scripts/character_aliases.py scripts/character_master.py scripts/tl_common.py scripts/format_tl.py \
             scripts/add_set_operations.py scripts/validate_tl.py scripts/review_tl.py scripts/tl_merge.py site-dist/scripts/
+          deploy_sha="$(git rev-parse HEAD)"
+          sed -i "s/__DEPLOY_SHA__/${deploy_sha}/g" site-dist/index.html site-dist/app.js
+          ! grep -q __DEPLOY_SHA__ site-dist/index.html site-dist/app.js
+
+      - name: Smoke-test published Python modules
+        run: PYTHONPATH=site-dist:site-dist/scripts python -c "from format_tl import format_text; from tl_merge import merge_texts; assert 'アオイ' in format_text('1:06 アオイ')"
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
