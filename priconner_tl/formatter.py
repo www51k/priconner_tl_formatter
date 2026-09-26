@@ -251,7 +251,13 @@ def format_text(
         # コメント本文（//以降）はそのまま保持する。
         if (
             not event.name
-            and re.search(r"(?:バトル開始|開始時|開始)", line)
+            and (
+                re.search(r"(?:バトル開始|開始時|開始)", line)
+                or re.fullmatch(
+                    r"\s*1:30\s*\[[54321-]{5}\]🅰️(?:ON|OFF)\s*",
+                    line,
+                )
+            )
             and (event.mask or re.search(r"🅰️(?:ON|OFF)", line))
         ):
             head, separator, comment = line.partition("//")

@@ -30,6 +30,29 @@ class TlProcessingTests(unittest.TestCase):
         self.assertIn("すみれ", format_text("1:06　ヴァイオレット\n"))
         self.assertNotIn("ヴァイオレット", format_text("1:06　ヴァイオレット\n"))
 
+    def test_complete_original_set_timeline_is_preserved_after_formatting(self) -> None:
+        source = (
+            "1:30 〇〇〇✕✕ off\n"
+            "1:06 アオイ 〇〇〇〇〇\n"
+            "0:49 アメス 〇✕〇〇✕\n"
+            "0:44 リトリリ 〇〇〇〇✕\n"
+            "0:44 ネフィ 〇〇〇〇〇\n"
+            "0:40 アメス 〇〇〇✕✕\n"
+            "0:33 アオイ 〇〇〇〇〇\n"
+            "0:29 ネフィ 〇〇〇✕〇\n"
+            "0:29 アオイ 〇〇〇〇〇\n"
+            "0:17 ネフィ 〇〇〇〇✕ on\n"
+            "0:14 ペコ 〇〇〇〇〇\n"
+        )
+        result = add_operations(format_text(source))
+        self.assertTrue(result.startswith("[543--]🅰️OFF\n"))
+        self.assertEqual(
+            re.findall(r"\[([54321-]{5})\]", result),
+            ["543--", "54321", "5-32-", "5432-", "54321", "543--",
+             "54321", "543-1", "54321", "5432-", "54321"],
+        )
+        self.assertIn("0:17　ネフィ　　[5432-]🅰️ON", result)
+
     def test_formation_mask_ignores_invisible_direction_controls(self) -> None:
         source = (
             "1:30 〇\u202a\u202a✕\u202c〇〇✕\u202c\n"

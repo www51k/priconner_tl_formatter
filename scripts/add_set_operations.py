@@ -1236,6 +1236,28 @@ def add_operations(
 ) -> str:
     """キャラ別SET精査後に、オートだけを反映する処理パイプライン。"""
     source_has_set = any(MASK_RE.search(line) for line in text.splitlines())
+    if source_has_set and not ignore_original_set:
+        lines = text.splitlines()
+        names = character_names_from_formation(text)
+        events = [parse_event(line_no, line, names) for line_no, line in enumerate(lines, 1)]
+        character_events = [event for event in events if event.name and event.name != "ボス"]
+        first_event_index = next(
+            (
+                index for index, event in enumerate(events)
+                if event.name and event.name != "ボス"
+            ),
+            len(lines),
+        )
+        has_initial_set = any(
+            re.fullmatch(r"\s*\[[54321-]{5}\](?:🅰️(?:ON|OFF))?\s*", line)
+            for line in lines[:first_event_index]
+        )
+        if has_initial_set and character_events and all(
+            event.mask is not None for event in character_events
+        ):
+            # 開始SETと全発動行のSETが揃うTLは、確定した操作列。
+            # 矢印用の自動補正をかけると、投稿者指定の状態を上書きしてしまう。
+            return add_auto_operations(ensure_initial_operation(text, initial))
     character_refined = refine_character_set_operations(
         text,
         initial=initial,
