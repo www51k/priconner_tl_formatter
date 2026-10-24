@@ -281,7 +281,15 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
 
     merged_lines = []
     if formatted_events:
-        merged_lines.extend(formatted_lines[:formatted_events[0].order])
+        preamble_end = formatted_events[0].order
+    else:
+        # 名前を解決できない場合でも、時刻行より前の開始SETや設定は
+        # マージ結果に必要なので前置きとして保持する。
+        preamble_end = next(
+            (index for index, line in enumerate(formatted_lines) if TIME_LINE_RE.match(line)),
+            len(formatted_lines),
+        )
+    merged_lines.extend(formatted_lines[:preamble_end])
     for _, block in merged_blocks:
         merged_lines.extend(block)
     for index, line in enumerate(formatted_lines):
