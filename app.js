@@ -813,7 +813,6 @@ mergeButton.addEventListener("click", async () => {
   }
   try {
     const formation = [...formationList.querySelectorAll("input")].map((field) => field.value.trim()).filter(Boolean);
-    if (formation.length !== 5) throw new Error("編成を5人入力してください");
     mergeA.value = normalizeBattleNames(mergeA.value);
     saveMergeCache();
     renderMergeSources();
