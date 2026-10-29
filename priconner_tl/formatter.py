@@ -238,6 +238,11 @@ def format_text(
     previous_event_seconds: int | None = None
     previous_time_bucket: int | None = None
     for line_no, line in enumerate(normalized_lines, 1):
+        if not line.strip() and previous_event_seconds is not None:
+            next_line = next((item for item in normalized_lines[line_no:] if item.strip()), "")
+            next_time = re.match(r"^\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?(\d{1,2}):(\d{1,2})(?!\d)", next_line)
+            if next_time and int(next_time.group(1)) * 60 + int(next_time.group(2)) == previous_event_seconds:
+                continue
         event = parse_event(line_no, line, character_names)
         # キャラ名直後の単独アポストロフィは手動UBの注記なので、
         # 時刻後の☆表記と同じ⭐️手動UB表示へ統一する。
