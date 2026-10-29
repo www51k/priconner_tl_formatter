@@ -133,7 +133,7 @@ def character_resolver(formation: Iterable[str] = ()):
     return resolve
 
 
-def parse_events(text: str, source: str, formation: Iterable[str] = ()) -> tuple[list[MergeEvent], list[str]]:
+def parse_events(text: str, source: str, formation: Iterable[str] = (), *, retain_unresolved: bool = False) -> tuple[list[MergeEvent], list[str]]:
     """Parse timed and arrow lines, returning events and unresolved names."""
     # Browser/clipboard exports sometimes preserve HTML spacing entities.
     text = html.unescape(text).replace("\u00a0", " ")
@@ -165,7 +165,10 @@ def parse_events(text: str, source: str, formation: Iterable[str] = ()) -> tuple
         if name is None:
             if raw_name and raw_name not in {"バトル開始", "開始", "開始時", "ボス", "敵"}:
                 unresolved.append(raw_name)
-            continue
+                if retain_unresolved:
+                    name = "未解決:" + raw_name
+            if name is None:
+                continue
         events.append(MergeEvent(source, order, seconds, name, raw_name, manual, arrow, raw))
     return events, sorted(set(unresolved))
 
@@ -226,8 +229,8 @@ def merge_texts(text_a: str, text_b: str, formation: Iterable[str] = ()) -> dict
     """
     text_a = expand_arrow_times(text_a)
     text_b = expand_arrow_times(text_b)
-    events_a, unresolved_a = parse_events(text_a, "a", formation)
-    events_b, unresolved_b = parse_events(text_b, "b", formation)
+    events_a, unresolved_a = parse_events(text_a, "a", formation, retain_unresolved=True)
+    events_b, unresolved_b = parse_events(text_b, "b", formation, retain_unresolved=True)
     formatted_lines = text_b.splitlines()
 
     def line_seconds(line: str) -> int | None:

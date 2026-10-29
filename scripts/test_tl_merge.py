@@ -16,6 +16,20 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_unregistered_boss_is_retained_through_formatting(self):
+        from priconner_tl.merge import merge_texts as package_merge_texts
+        from priconner_tl.formatter import format_text
+
+        battle = "00:02 アメス\n00:02 クレジッタ\n00:02 グレア\n00:02 アーク・デアム"
+        formatted = "0:02 アメス\n0:02 クレジッタ\n0:02 グレア"
+        for merge in (merge_texts, package_merge_texts):
+            with self.subTest(merge=merge.__module__):
+                result = merge(battle, formatted)
+                output = format_text(result["text"])
+                self.assertIn("アーク・デアム", output)
+                self.assertGreater(output.index("アーク・デアム"), output.index("グレア"))
+                self.assertIn("アーク・デアム", result["unresolved"])
+
     def test_boss_events_are_preserved_and_formal_names_match(self):
         from priconner_tl.merge import merge_texts as package_merge_texts
 
