@@ -16,6 +16,15 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_merge_formats_ten_second_boundary_before_unknown_boss(self):
+        from priconner_tl.formatter import format_text
+
+        battle = "0:23 マホ\n0:17 アーク・デアム\n0:16 アメス\n0:16 アメス"
+        formatted = "0:23 マホ\n0:16 アメス"
+        output = format_text(merge_texts(battle, formatted)["text"])
+        self.assertIn("0:23　マホ\n\n0:17　アーク・デアム\n0:16　アメス", output)
+        self.assertIn("→　アメス", output)
+
     def test_unregistered_boss_is_retained_through_formatting(self):
         from priconner_tl.merge import merge_texts as package_merge_texts
         from priconner_tl.formatter import format_text

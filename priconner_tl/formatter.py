@@ -391,6 +391,14 @@ def format_text(
             if event.star and event.mask and not preserve_set_operations:
                 output.append(f"[{event.mask}]")
         else:
+            # 未登録のボス名など、キャラとして解決できない時刻行も
+            # 10秒区切りの基準に含める。
+            time_match = re.match(r"^\s*(?:[⭐️⭐︎⭐★☆🔺△]\s*)?(\d{1,2}):(\d{1,2})(?!\d)", line)
+            if time_match:
+                current_bucket = (int(time_match.group(1)) * 60 + int(time_match.group(2))) // 10
+                if previous_time_bucket is not None and current_bucket != previous_time_bucket and output and output[-1].strip():
+                    output.append("")
+                previous_time_bucket = current_bucket
             arrow_chain_active = False
             previous_event_was_star = False
             previous_event_was_indented = False
