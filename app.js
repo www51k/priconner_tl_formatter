@@ -1,5 +1,9 @@
 const PYODIDE_VERSION = "0.27.2";
 const ASSET_VERSION = "__DEPLOY_SHA__";
+const buildVersion = document.querySelector("#build-version");
+if (buildVersion && !ASSET_VERSION.startsWith("__")) {
+  buildVersion.textContent = `（ビルド ${ASSET_VERSION.slice(0, 12)}）`;
+}
 const SCRIPT_NAMES = ["character_aliases.py", "character_master.py", "tl_common.py", "format_tl.py", "add_set_operations.py", "validate_tl.py", "review_tl.py", "tl_merge.py"];
 const PACKAGE_NAMES = ["__init__.py", "character_aliases.py", "character_master.py", "common.py", "formatter.py", "merge.py", "set_operations.py"];
 

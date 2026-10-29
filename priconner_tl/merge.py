@@ -13,6 +13,8 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from .common import BOSS_NAMES
+
 def _load_aliases() -> tuple[dict, dict]:
     candidates = [
         Path("/home/pyodide/character_aliases.json"),
@@ -160,7 +162,7 @@ def parse_events(text: str, source: str, formation: Iterable[str] = ()) -> tuple
         exact = next((n for n in sorted(formation_names, key=len, reverse=True)
                       if body == n or body.startswith(n + " ") or body.startswith(n + "　")), None)
         raw_name = exact or raw_name
-        name = resolve(raw_name)
+        name = "ボス" if raw_name in BOSS_NAMES or raw_name in {"ボス", "ボスUB", "敵", "敵UB"} else resolve(raw_name)
         if name is None:
             if raw_name and raw_name not in {"バトル開始", "開始", "開始時", "ボス", "敵"}:
                 unresolved.append(raw_name)

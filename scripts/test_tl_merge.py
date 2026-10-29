@@ -16,6 +16,23 @@ FORMATION = [
 
 
 class TLMergeTests(unittest.TestCase):
+    def test_boss_events_are_preserved_and_formal_names_match(self):
+        from priconner_tl.merge import merge_texts as package_merge_texts
+
+        for merge in (merge_texts, package_merge_texts):
+            with self.subTest(merge=merge.__module__):
+                result = merge(
+                    "1:10 フロストハウンド\n1:00 ボス\n0:50 敵UB\n",
+                    "1:10 ボス　[54321] 注記\n0:55 シオリ\n",
+                    ["シオリ"],
+                )
+                self.assertEqual(result["unresolved"], [])
+                self.assertIn("1:10 ボス　[54321] 注記", result["text"])
+                self.assertNotIn("フロストハウンド", result["text"])
+                self.assertIn("1:00　ボス", result["text"])
+                self.assertIn("0:50　敵UB", result["text"])
+                self.assertLess(result["text"].index("1:00"), result["text"].index("0:55"))
+
     def test_arrow_expansion_keeps_each_target_as_independent_event(self):
         events, unresolved = parse_events(
             expand_arrow_times("0:40　すみれ\n　　　→　ティア\n　　　→　シオリ"),
