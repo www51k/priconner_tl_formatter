@@ -23,6 +23,7 @@ const carryoverTime = document.querySelector("#carryover-time");
 const carryoverTimeValue = document.querySelector("#carryover-time-value");
 const addSetOperations = document.querySelector("#add-set-operations");
 const preserveSetOperations = document.querySelector("#preserve-set-operations");
+const dangoFormat = document.querySelector("#dango-format");
 const mergeA = document.querySelector("#merge-a");
 const mergeB = document.querySelector("#merge-b");
 const mergeButton = document.querySelector("#merge");
@@ -691,6 +692,7 @@ import sys
 sys.path.insert(0, "/home/pyodide")
 sys.path.insert(0, "/home/pyodide/scripts")
 from format_tl import format_text
+from priconner_tl.formatter import format_dango
 from add_set_operations import add_operations
 from validate_tl import validate
 from review_tl import collect_review_items
@@ -744,9 +746,14 @@ for error in errors:
 json.dumps({"text": set_text, "errors": errors, "error_details": error_details, "review": review_items }, ensure_ascii=False)
 `);
     const data = JSON.parse(result);
-    output.textContent = addSetOperations.checked && Number(carryoverTime.value) >= 90
+    let resultText = addSetOperations.checked && Number(carryoverTime.value) >= 90
       ? ensureInitialSet(data.text)
       : data.text;
+    if (dangoFormat.checked) {
+      pyodide.globals.set("dango_source_text", resultText);
+      resultText = await pyodide.runPythonAsync("format_dango(dango_source_text)");
+    }
+    output.textContent = resultText;
     mergeB.value = output.textContent;
     saveOutputCache();
     copyButton.disabled = false;

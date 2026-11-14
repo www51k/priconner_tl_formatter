@@ -22,6 +22,24 @@ from .common import (
 )
 
 
+def format_dango(text: str) -> str:
+    """整形済みの構造部分をお団子表記にし、コメントは保持する。"""
+    def convert_line(line: str) -> str:
+        positions = [pos for pos in (line.find("//"), line.find("'")) if pos >= 0]
+        boundary = min(positions) if positions else len(line)
+        head, comment = line[:boundary], line[boundary:]
+        head = re.sub(
+            r"\[([54321-]{5})\]",
+            lambda match: "".join("－" if char == "-" else "〇" for char in match.group(1)),
+            head,
+        )
+        head = re.sub(r"(?<=[〇－])\s*(?=🅰️(?:ON|OFF))", " ", head)
+        head = re.sub(r"🅰️(ON|OFF)", r"オート\1", head)
+        return head + comment
+
+    return "\n".join(convert_line(line) for line in text.split("\n"))
+
+
 def split_inline_character_arrow(line: str) -> list[str]:
     """キャラ→キャラを、時刻行と矢印行へ分ける。"""
     candidates = sorted(set(DISPLAY_NAMES), key=len, reverse=True)
