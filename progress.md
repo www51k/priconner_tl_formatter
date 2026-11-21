@@ -1,8 +1,15 @@
 # progress.md — priconner_tl_formatter
 
 <!-- progress-collection:v1
-{"project_id":"priconner_tl_formatter","monitor":true,"instruction_target":"existing-codex","dispatch_policy":"verified-only","host":null,"thread_id":null,"status":"NEEDS_TRIAGE","last_verified_at":null}
+{"project_id":"priconner_tl_formatter","monitor":true,"instruction_target":"existing-codex","dispatch_policy":"verified-only","host":null,"thread_id":null,"status":"PAUSED_BY_USER","last_verified_at":null}
 -->
+
+
+## 管理状態（2026-11-22 利用者指定）
+- **監視対象のまま保留（PAUSED_BY_USER）**。進捗・状態の確認は可能だが、タスクの起動・再開は禁止。
+- 現時点で急ぎの実装作業なし。ユーザーの再開指示まで実装・テストの自動起動や既存Codexへの作業指示を行わない。
+- 現地PCのCodex/OSタスクループが停止していることは未検証。ローカル設定の `enabled: false` /停止マーカー/スレッド所有者を確認するまでは停止完了とみなさない。
+- 再開は利用者の明示指示と既存担当・停止条件の再照合後のみ。
 
 ## 収集・指示
 - `progress-collection` の監視対象。既存Codex担当への指示候補（PC/thread未照合で未送信）。
